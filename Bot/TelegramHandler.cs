@@ -9,6 +9,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Yandex.Cloud.Functions;
+using TestMultiple;
+// ReSharper disable UnusedAutoPropertyAccessor.Global
+
 
 namespace Bot;
 
@@ -24,12 +27,14 @@ public class Response
     }
 }
 
+// ReSharper disable once UnusedType.Global
 public class TelegramHandler : YcFunction<string, Response>
 {
     private const string CodePath = "/function/code/";
     
     public Response FunctionHandler(string request, Context context)
     {
+        // Test.Main();
         var logger = new ConsoleLogger();
         var configuration = Configuration.FromJson(CodePath + "settings.json");
         var tgClient = new TelegramBotClient(configuration.TelegramToken);
@@ -39,7 +44,7 @@ public class TelegramHandler : YcFunction<string, Response>
             var body = JObject.Parse(request).GetValue("body")!.Value<string>()!;
             var update = JsonConvert.DeserializeObject<Update>(body)!;
             var view = new HtmlMessageView(tgClient, configuration.DevopsChatId);
-            var messagesRepo = new S3Bucket(configuration.CreateBotBucketService());
+            var bucketRepo = new S3Bucket(configuration.CreateBotBucketService());
             var botDatabase = new BotDatabase(configuration);
 
             var commands = new IChatCommandHandler[]
@@ -49,10 +54,10 @@ public class TelegramHandler : YcFunction<string, Response>
                 new LudkaCommandHandler(view)
             };
 
-            var updateService = new HandleUpdateService(view, commands, messagesRepo, botDatabase);
+            var updateService = new HandleUpdateService(view, commands, bucketRepo, botDatabase);
             updateService.Handle(update).Wait();
             if (GetSender(update) != configuration.DevopsChatId)
-                //tgClient.SendTextMessageAsync(settings.DevopsChatId, presenter.FormatIncomingUpdate(update), null, parseMode: ParseMode.Html);
+                // tgClient.SendTextMessageAsync(settings.DevopsChatId, presenter.FormatIncomingUpdate(update), null, parseMode: ParseMode.Html);
                 Console.WriteLine(view.FormatIncomingUpdate(update));
             return new Response(200, "ok");
         }

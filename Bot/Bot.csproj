@@ -28,5 +28,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TestMultiple\TestMultiple.csproj" />
+  </ItemGroup>
+
+
 
 </Project>

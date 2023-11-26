@@ -17,9 +17,4 @@ public class LudkaCommandHandler : IChatCommandHandler
     {
         await messageView.SendDice(fromChatId, Emoji.SlotMachine);
     }
-
-    public async Task HandlePlainTextWithKeyboard(string text, long fromChatId, ReplyKeyboardMarkup keyboard)
-    {
-        await messageView.ShowHelpWithKeyboard(fromChatId, keyboard);
-    }
 }

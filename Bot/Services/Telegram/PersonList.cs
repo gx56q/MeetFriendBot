@@ -4,7 +4,7 @@ namespace Bot.Services.Telegram
 {
     public class PersonList
     {
-        public string Id { get; set; }
+        public string Id { get; }
         public string Name { get; set; }
         public List<string> Participants { get; set; }
         public string Status { get; set; }

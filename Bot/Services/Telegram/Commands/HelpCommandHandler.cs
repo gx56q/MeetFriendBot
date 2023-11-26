@@ -16,9 +16,4 @@ public class HelpCommandHandler : IChatCommandHandler
     {
         await messageView.ShowHelp(fromChatId, null);
     }
-
-    public async Task HandlePlainTextWithKeyboard(string text, long fromChatId, ReplyKeyboardMarkup keyboard)
-    {
-        await messageView.ShowHelpWithKeyboard(fromChatId, keyboard);
-    }
 }

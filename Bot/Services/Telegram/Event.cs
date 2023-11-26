@@ -37,10 +37,8 @@ namespace Bot.Services.Telegram
         public string? Location { get; set; }
         public string? Date { get; set; }
         public bool? Picture { get; set; }
-
         public List<Participant>? Participants { get; set; }
         public int? InlinedMessageId { get; set; }
-
         public string Creator { get; set; }
         public string Status = "draft";
 

@@ -87,8 +87,7 @@ public class HandleUpdateService
     private async Task HandleForward(Message message)
     {
         var forwardFromId = message.ForwardFrom!.Id;
-        var fromChatId = message.ForwardFromChat!.Id;
-        await messageView.Say("Спасибо за пересылку!", fromChatId);
+        await messageView.Say("Спасибо за пересылку!", forwardFromId);
     }
     
     private async Task HandlePlainText(Message message)

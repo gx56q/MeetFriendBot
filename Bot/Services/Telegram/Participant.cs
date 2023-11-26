@@ -4,11 +4,12 @@ namespace Bot.Services.Telegram
 {
     public class Participant
     {
-        public string UserId { get; set; }
+        public string UserId { get; }
         public Status ParticipantStatus { get; set; }
 
-        public Participant()
+        public Participant(string userId)
         {
+            UserId = userId;
             ParticipantStatus = Status.Maybe;
         }
 

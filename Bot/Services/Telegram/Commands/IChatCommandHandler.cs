@@ -7,5 +7,4 @@ public interface IChatCommandHandler
     string Command { get; }
     
     Task HandlePlainText(string text, long fromChatId, ReplyKeyboardMarkup? keyboard);
-    Task HandlePlainTextWithKeyboard(string text, long fromChatId, ReplyKeyboardMarkup keyboard);
 }

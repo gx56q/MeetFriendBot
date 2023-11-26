@@ -375,6 +375,7 @@ public class MyEventsHandler
         var text = message.Text;
 
         var draft = await bucket.GetEventDraft(userId);
+        // TODO logic
         draft.Location = text;
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
@@ -774,7 +775,4 @@ public class MyEventsHandler
         }
         await messageView.AnswerCallbackQuery(callbackQueryId, null);
     }
-    
-
-
 }

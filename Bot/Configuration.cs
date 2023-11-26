@@ -14,7 +14,7 @@ public class Configuration
 
     private readonly IConfigurationSection appSettings;
 
-    public Configuration(IConfigurationSection appSettings, YandexStorageOptions cloudStorageOptions)
+    private Configuration(IConfigurationSection appSettings, YandexStorageOptions cloudStorageOptions)
     {
         this.appSettings = appSettings;
         YandexStorageOptions = cloudStorageOptions;
