@@ -128,22 +128,22 @@ public class MyEventsHandler
         var fromChatId = message.Chat.Id;
         var draft = await bucket.GetEventDraft(message.From!.Id);
         var fileId = message.Photo!.Last().FileId;
-        await bucket.WriteEventPicture(draft.Id, fileId);
-        draft.Picture = true;
+        await bucket.WriteEventPicture(draft.Id.ToString(), fileId);
+        draft.Picture = fileId;
         await bucket.WriteEventDraft(message.From.Id, draft);
         await bucket.WriteUserState(message.From.Id,
-            draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+            draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото изменено!", fromChatId,
             mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, message.From.Id, fromChatId, true);
     }
 
-    private async Task UpdateEventMessage(Event draft, long userId, long chatId, bool isPicture = false)
+    private async Task UpdateEventMessage(Event? draft, long userId, long chatId, bool isPicture = false)
     {
         string messageText;
         InlineKeyboardMarkup? keyboard;
         var fields = draft.GetFields();
-        if (draft.Status == "active")
+        if (draft.Status == DbStatus.Active)
         {
             messageText = "Редактирование встречи:\n\n" + GetEventMessageText(draft, fields);
             keyboard = GetEditEventInlineKeyboard(draft, fields);
@@ -158,13 +158,13 @@ public class MyEventsHandler
         {
             var messageId = draft.InlinedMessageId!.Value;
             await messageView.DeleteMessage(chatId, messageId);
-            var pictureId = await bucket.GetEventPicture(draft.Id);
+            var pictureId = await bucket.GetEventPicture(draft.Id.ToString());
             var message = await messageView.SayWithInlineKeyboardAndPhoto(messageText,
                 chatId, keyboard, pictureId);
             draft.InlinedMessageId = message.MessageId;
             await bucket.WriteEventDraft(userId, draft);
         }
-        else if (draft.Picture == true)
+        else if (draft.Picture != null)
         {
             await messageView.EditInlineMessageWithPhoto(messageText, chatId, draft.InlinedMessageId!.Value, keyboard,
                 null);
@@ -175,7 +175,7 @@ public class MyEventsHandler
         }
     }
 
-    private string GetEventMessageText(Event newEvent, Dictionary<string, string> fields)
+    private string GetEventMessageText(Event? newEvent, Dictionary<string, string> fields)
     {
         var messageText = new StringBuilder();
         foreach (var field in fields)
@@ -229,13 +229,13 @@ public class MyEventsHandler
         return messageText.ToString();
     }
 
-    private static object GetPropertyValue(Event myEvent, string propertyName)
+    private static object GetPropertyValue(Event? myEvent, string propertyName)
     {
         var propertyInfo = typeof(Event).GetProperty(propertyName);
         return propertyInfo?.GetValue(myEvent) ?? "🚫";
     }
 
-    private static InlineKeyboardMarkup GetEditEventInlineKeyboard(Event existingEvent,
+    private static InlineKeyboardMarkup GetEditEventInlineKeyboard(Event? existingEvent,
         Dictionary<string, string> fields)
     {
         var inlineKeyboard = GetBaseInlineKeyboard(fields);
@@ -322,7 +322,7 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var draft = await bucket.GetEventDraft(userId);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Ввод отменен", fromChatId, mainHandler.GetMainKeyboard());
     }
 
@@ -331,10 +331,10 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var chatId = message.Chat.Id;
         var draft = await bucket.GetEventDraft(userId);
-        await bucket.DeleteEventPicture(draft.Id);
-        draft.Picture = false;
+        await bucket.DeleteEventPicture(draft.Id.ToString());
+        draft.Picture = null;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото удалено!", chatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, chatId, true);
     }
@@ -347,9 +347,10 @@ public class MyEventsHandler
 
         var draft = await bucket.GetEventDraft(userId);
         var participants = text!.Split(' ');
-        draft.Participants = participants.Select(p => new Participant(p.Trim(), Status.Maybe)).ToList();
+        // validate participants
+        draft.Participants = participants.Select(p => new Participant(long.Parse(p))).ToList();
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Участники изменены!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -359,11 +360,12 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
+        // TODO: validate date
 
         var draft = await bucket.GetEventDraft(userId);
-        draft.Date = text;
+        draft.Date = DateTime.Parse(text);
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Дата изменена!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -378,7 +380,7 @@ public class MyEventsHandler
         // TODO logic
         draft.Location = text;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Место изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -392,7 +394,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(userId);
         draft.Description = text;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Описание изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -406,7 +408,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(userId);
         draft.Name = text;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == DbStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Название изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -431,7 +433,7 @@ public class MyEventsHandler
     {
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
-        Event draft;
+        Event? draft;
         if (await bucket.GetUserState(userId) != State.Start)
         {
             await messageView.Say("Вы уже создаете событие", fromChatId);
@@ -442,16 +444,16 @@ public class MyEventsHandler
         else
         {
             await bucket.WriteUserState(userId, State.CreatingEvent);
-            draft = new Event(userId);
+            draft = Event.CreateFromCreatorId(userId);
         }
 
         var fields = draft.GetFields();
         var messageText = "Новая встреча\n\n" + GetEventMessageText(draft, fields);
         var inlineKeyboard = GetNewEventInlineKeyboard(fields);
         Message? replyMessage;
-        if (draft.Picture == true)
+        if (draft.Picture != null)
         {
-            var pictureId = await bucket.GetEventPicture(draft.Id);
+            var pictureId = await bucket.GetEventPicture(draft.Id.ToString());
             replyMessage =
                 await messageView.SayWithInlineKeyboardAndPhoto(messageText, fromChatId, inlineKeyboard, pictureId);
         }
@@ -515,23 +517,23 @@ public class MyEventsHandler
         var eventId = callbackQuery.Data!.Split('_')[1];
         var callbackQueryId = callbackQuery.Id;
         var events = RetrieveEvents(userId);
-        var myEvent = events.FirstOrDefault(e => e.Id == eventId);
+        var myEvent = events.FirstOrDefault(e => e.Id.ToString() == eventId);
         if (myEvent != null)
         {
-            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")?.ParticipantStatus;
+            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.UserId == userId)?.ParticipantStatus;
             if (currentStatus == Status.Maybe)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus = Status.WillGo;
+                myEvent.Participants!.FirstOrDefault(p => p.UserId == userId)!.ParticipantStatus = Status.WillGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
             }
             else if (currentStatus == Status.WillGo)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus = Status.WontGo;
+                myEvent.Participants!.FirstOrDefault(p => p.UserId == userId)!.ParticipantStatus = Status.WontGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы не идете");
             }
             else if (currentStatus == Status.WontGo)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus = Status.WillGo;
+                myEvent.Participants!.FirstOrDefault(p => p.UserId == userId)!.ParticipantStatus = Status.WillGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
             }
             await HandleViewEventAction(callbackQuery, true);
@@ -563,12 +565,12 @@ public class MyEventsHandler
 
         await bucket.WriteUserState(userId, State.Start);
         var events = RetrieveEvents(userId);
-        var myEvent = events.FirstOrDefault(e => e.Id == eventId);
+        var myEvent = events.FirstOrDefault(e => e.Id.ToString() == eventId);
 
         if (myEvent != null)
         {
             var messageText = GetEventMessageText(myEvent, myEvent.GetFields());
-            var inlineKeyboard = GetEventInlineKeyboard(myEvent);
+            var inlineKeyboard = GetEventInlineKeyboard(myEvent, userId);
             if (toEdit)
             {
                 await messageView.EditInlineMessageWithPhoto(messageText, chatId, messageId, inlineKeyboard,
@@ -577,19 +579,19 @@ public class MyEventsHandler
             }
 
             // TODO: somehow check if message has photo
-            if (myEvent.Picture == false)
+            if (myEvent.Picture == null)
                 await messageView.EditInlineMessage(messageText, chatId, messageId, inlineKeyboard);
             else
             {
                 await messageView.DeleteMessage(chatId, messageId);
                 await messageView.SayWithInlineKeyboardAndPhoto(messageText, chatId, inlineKeyboard,
-                    await bucket.GetEventPicture(myEvent.Id));
+                    await bucket.GetEventPicture(myEvent.Id.ToString()));
             }
         }
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
     
-    private InlineKeyboardMarkup GetEventInlineKeyboard(Event myEvent)
+    private InlineKeyboardMarkup GetEventInlineKeyboard(Event myEvent, long userId)
     { 
         var inlineKeyboard = new List<List<InlineKeyboardButton>>();
         List<InlineKeyboardButton> firstRow = new();
@@ -598,9 +600,9 @@ public class MyEventsHandler
                 CallbackData = $"addToCalendar_{myEvent.Id}"
             };
         firstRow.Add(addToCalendarButton);
-        if (myEvent.Participants != null && myEvent.Participants.Any(p => p.UserId == "xoposhiy"))
+        if (myEvent.Participants != null && myEvent.Participants.Any(p => p.UserId == userId))
         {
-            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus;
+            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.UserId == userId)!.ParticipantStatus;
             switch (currentStatus)
             {
                 case Status.Maybe or Status.WontGo:
@@ -635,8 +637,7 @@ public class MyEventsHandler
         };
         inlineKeyboard.Add(new List<InlineKeyboardButton> { showOnMapButton, orderTaxiButton });
             
-        // if (myEvent.Creator == userId.ToString())
-        if (myEvent.Creator == "349173467")
+        if (myEvent.Creator == userId)
         {
             var editButton = new InlineKeyboardButton("Редактировать встречу")
             {
@@ -659,7 +660,7 @@ public class MyEventsHandler
         var chatId = callbackQuery.Message!.Chat.Id;
         var eventId = callbackQuery.Data!.Split('_')[1];
         var events = RetrieveEvents(userId);
-        var myEvent = events.FirstOrDefault(e => e.Id == eventId);
+        var myEvent = events.FirstOrDefault(e => e.Id.ToString() == eventId);
         if (myEvent != null)
         {
             var calendar = GetEventCalendar(myEvent);
@@ -690,7 +691,7 @@ public class MyEventsHandler
         var messageId = callbackQuery.Message.MessageId;
         
         var draft = await bucket.GetEventDraft(userId);
-        var eventId = draft.Id;
+        var eventId = draft.Id.ToString();
         await bucket.ClearEventDraft(userId);
         await bucket.DeleteEventPicture(eventId);
         await bucket.WriteUserState(userId, State.Start);
@@ -707,8 +708,13 @@ public class MyEventsHandler
         var messageId = callbackQuery.Message.MessageId;
         
         var draft = await bucket.GetEventDraft(userId);
+        if (draft == null)
+        {
+            // TODO: обработать
+            return;
+        }
         // TODO: make smart check
-        if (draft.Name == null)
+        if (draft.Name == string.Empty)
         {
             await messageView.Say("Нужно заполнить название", chatId);
             return;
@@ -755,9 +761,8 @@ public class MyEventsHandler
         
         
         var events = RetrieveEvents(userId);
-        var existingEvent = events.FirstOrDefault(e => e.Id == eventId);
-        // if (existingEvent != null && existingEvent.Creator == userId.ToString())
-        if (existingEvent != null && existingEvent.Creator == "349173467")
+        var existingEvent = events.FirstOrDefault(e => e.Id.ToString() == eventId);
+        if (existingEvent != null && existingEvent.Creator == userId)
         {
             await bucket.WriteUserState(userId, State.EditingEvent);
             existingEvent.InlinedMessageId = messageId;
@@ -765,9 +770,9 @@ public class MyEventsHandler
             var fields = existingEvent.GetFields();
             var messageText = "Редактирование события\n\n" + GetEventMessageText(existingEvent, fields);
             var inlineKeyboard = GetEditEventInlineKeyboard(existingEvent, fields);
-            if (existingEvent.Picture == true)
+            if (existingEvent.Picture != null)
                 await messageView.EditInlineMessageWithPhoto(messageText, chatId, messageId, inlineKeyboard, 
-                    await bucket.GetEventPicture(existingEvent.Id));
+                    await bucket.GetEventPicture(existingEvent.Id.ToString()));
             else
             {
                 await messageView.EditInlineMessage(messageText, chatId, messageId, inlineKeyboard);

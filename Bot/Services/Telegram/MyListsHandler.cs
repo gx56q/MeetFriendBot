@@ -172,7 +172,7 @@ public class MyListsHandler
         
         await bucket.WriteUserState(userId, State.Start);
         var personLists = RetrievePeople(userId);
-        var myPersonList = personLists.FirstOrDefault(p => p.Id == listId);
+        var myPersonList = personLists.FirstOrDefault(p => p.Id.ToString() == listId);
 
         if (myPersonList != null)
         {
@@ -220,7 +220,7 @@ public class MyListsHandler
         var personListId = data[1];
         
         var personLists = RetrievePeople(userId);
-        var myPersonList = personLists.FirstOrDefault(pl => pl.Id == personListId);
+        var myPersonList = personLists.FirstOrDefault(pl => pl.Id.ToString() == personListId);
 
         if (myPersonList != null)
         {

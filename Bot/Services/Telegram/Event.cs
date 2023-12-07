@@ -1,5 +1,7 @@
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Ydb.Sdk.Value;
 
 namespace Bot.Services.Telegram
 {
@@ -8,16 +10,16 @@ namespace Bot.Services.Telegram
         // TODO: change from string to normal types
         [JsonConstructor]
         public Event(
-            string id,
+            Guid id,
             string? name,
             string? description,
             string? location,
-            string? date,
-            bool? picture,
+            DateTime? date,
+            string? picture,
             List<Participant>? participants,
             int? inlinedMessageId,
-            string creator,
-            string status = "draft")
+            long creator,
+            DbStatus status = DbStatus.Draft)
         {
             Id = id;
             Name = name;
@@ -31,32 +33,19 @@ namespace Bot.Services.Telegram
             Status = status;
         }
 
-        public string Id { get; set; }
-        public string? Name { get; set; }
+        public Guid Id { get; set; }
+        public string Name { get; set; }
         public string? Description { get; set; }
         public string? Location { get; set; }
-        public string? Date { get; set; }
-        public bool? Picture { get; set; }
+        public DateTime? Date { get; set; }
+        public string? Picture { get; set; }
         public List<Participant>? Participants { get; set; }
         public int? InlinedMessageId { get; set; }
-        public string Creator { get; set; }
-        public string Status = "draft";
-
-        public Event(long creatorId) : this(
-            id: Guid.NewGuid().ToString(),
-            name: null,
-            description: null,
-            location: null,
-            date: null,
-            picture: null,
-            participants: null,
-            inlinedMessageId: null,
-            creator: creatorId.ToString())
-        {
-        }
-
-        public Event(string id, string name, string? description, string location,
-            string date, bool? picture, List<Participant> participants, string status, string creator)
+        public long Creator { get; set; }
+        public DbStatus Status { get; private set; }
+        
+        public Event(Guid id, string name, string? description, string? location,
+            DateTime date, string? picture, List<Participant>? participants, DbStatus status, long creator)
         {
             Id = id;
             Name = name;
@@ -68,20 +57,69 @@ namespace Bot.Services.Telegram
             Status = status;
             Creator = creator;
         }
-
+        
+        public static Event CreateFromCreatorId(long creatorId)
+        {
+            return new Event(
+                id: Guid.NewGuid(),
+                name: string.Empty, 
+                description: null,
+                location: null,
+                date: DateTime.Now,
+                picture: null,
+                participants: null,
+                inlinedMessageId: null,
+                creator: creatorId);
+        }
+        
+        public static Event CreateFromYdb(ResultSet.Row row)
+        {
+            var nameBytes = row["name"].GetString();
+            var descriptionBytes = row["description"].GetString();
+            var locationBytes = row["location"].GetString();
+            var pictureBytes = row["picture"].GetString();
+            
+            var name = Encoding.UTF8.GetString(nameBytes);
+            var description = Encoding.UTF8.GetString(descriptionBytes);
+            var location = Encoding.UTF8.GetString(locationBytes);
+            var picture = Encoding.UTF8.GetString(pictureBytes);
+            
+            var id = Guid.Parse(Encoding.UTF8.GetString(row["id"].GetString()));
+            var datetime = row["date"].GetDatetime();
+            var creator = row["creator"].GetInt64();
+            var participants = row["participants"].GetList();
+            var participantsList = participants.Select(p => 
+                new Participant(p.GetStruct()["user_id"].GetInt64(), 
+                    Enum.Parse<Status>(Encoding.UTF8.GetString(p.GetStruct()["status"].GetString()))))
+                .ToList();
+            
+            return new Event(id, name, description, location, datetime, picture, participantsList, DbStatus.Active,
+                creator);
+        }
+        
+        
+        // for tests
         public static Event FromJson(string json)
         {
             var jObject = JObject.Parse(json);
-            var id = jObject["id"]?.ToString();
+            var id = jObject["id"]?.ToObject<Guid?>();
             var name = jObject["name"]?.ToString();
             var description = jObject["description"]?.ToString();
             var location = jObject["location"]?.ToString();
-            var date = jObject["date"]?.ToString();
-            var picture = jObject["picture"]?.ToObject<bool?>();
+            var date = jObject["date"]?.ToObject<DateTime>();
+            var picture = jObject["picture"]?.ToString();
             var participants = jObject["participants"]?.ToObject<List<Participant>>() ?? new List<Participant>();
-            var status = jObject["status"]?.ToString();
-            var creator = jObject["creator"]?.ToString();
-            return new Event(id!, name!, description, location!, date!, picture, participants, status!, creator!);
+            var status = Enum.Parse<DbStatus>(jObject["status"]?.ToString() ?? "draft");
+            var creator = jObject["creator"]?.ToObject<long?>();
+            return new Event(id ?? Guid.NewGuid(),
+                name,
+                description, 
+                location, 
+                date ?? DateTime.Now,
+                picture,
+                participants,
+                status,
+                creator ?? 0);
         }
 
         public Dictionary<string, string> GetFields()
@@ -94,7 +132,7 @@ namespace Bot.Services.Telegram
             {
                 var propertyName = property.Name;
 
-                var propertyValue = property.GetValue(this);
+                // var propertyValue = property.GetValue(this);
 
                 var translatedName = TranslateToRussian(propertyName);
 
@@ -120,17 +158,17 @@ namespace Bot.Services.Telegram
             };
         }
 
-        public void SetPicture(bool? picture)
+        public void SetPicture(string picture)
         {
             Picture = picture;
         }
 
         public void Activate()
         {
-            Status = "active";
+            Status = DbStatus.Active;
         }
 
-        public void SetStatus(string status)
+        public void SetStatus(DbStatus status)
         {
             Status = status;
         }

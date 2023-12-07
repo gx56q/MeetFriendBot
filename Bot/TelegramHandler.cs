@@ -34,7 +34,6 @@ public class TelegramHandler : YcFunction<string, Response>
     
     public Response FunctionHandler(string request, Context context)
     {
-        // Test.Main();
         var logger = new ConsoleLogger();
         var configuration = Configuration.FromJson(CodePath + "settings.json");
         var tgClient = new TelegramBotClient(configuration.TelegramToken);
@@ -58,7 +57,7 @@ public class TelegramHandler : YcFunction<string, Response>
             updateService.Handle(update).Wait();
             if (GetSender(update) != configuration.DevopsChatId)
                 // tgClient.SendTextMessageAsync(settings.DevopsChatId, presenter.FormatIncomingUpdate(update), null, parseMode: ParseMode.Html);
-                Console.WriteLine(view.FormatIncomingUpdate(update));
+                logger.Info(view.FormatIncomingUpdate(update));
             return new Response(200, "ok");
         }
         catch (Exception e)

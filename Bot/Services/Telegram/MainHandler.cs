@@ -94,7 +94,7 @@ public class MainHandler : IMainHandler
                    break;
                case "picture":
                    var draft = await bucket.GetEventDraft(userId);
-                   if (draft.Picture == true)
+                   if (draft.Picture != null)
                    {
                        var deletePhotoKeyboard = new ReplyKeyboardMarkup(new[]
                        {

@@ -75,7 +75,7 @@ public class S3Bucket : IBucket
         }
     }
     
-    public async Task WriteEventDraft(long userId, Event draft)
+    public async Task WriteEventDraft(long userId, Event? draft)
     {
         var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
         var response = await objectService.PutAsync(
@@ -92,13 +92,13 @@ public class S3Bucket : IBucket
         }
     }
     
-    public async Task<Event> GetEventDraft(long userId)
+    public async Task<Event?> GetEventDraft(long userId)
     {
         var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
         var response = await objectService.GetAsync(filename);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return new Event(userId);
+            return null;
         }
         if (!response.IsSuccessStatusCode)
         {

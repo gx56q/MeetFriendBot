@@ -4,17 +4,17 @@ namespace Bot.Services.Telegram
 {
     public class Participant
     {
-        public string UserId { get; }
+        public long UserId { get; }
         public Status ParticipantStatus { get; set; }
 
-        public Participant(string userId)
+        public Participant(long userId)
         {
             UserId = userId;
             ParticipantStatus = Status.Maybe;
         }
 
         [JsonConstructor]
-        public Participant(string userId, Status participantStatus)
+        public Participant(long userId, Status participantStatus)
         {
             UserId = userId;
             ParticipantStatus = participantStatus;
