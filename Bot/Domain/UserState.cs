@@ -4,20 +4,15 @@ namespace Bot.Domain;
 
 public class UserState
 {
-    private State curState = State.Start;
+    private State currentState = State.Start;
     
     public string ToJson()
     {
-        return JsonConvert.SerializeObject(curState);
+        return JsonConvert.SerializeObject(currentState);
     }
     
     public static UserState? FromJson(string json)
     {
         return JsonConvert.DeserializeObject<UserState>(json);
-    }
-    
-    public void SetState(State state)
-    {
-        curState = state;
     }
 }

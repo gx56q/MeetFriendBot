@@ -38,10 +38,5 @@ namespace Bot.Domain
             return status == "draft" ? new PersonList(id!, name!, participants) { Status = EventStatus.Draft }
                 : new PersonList(id!, name!, participants) { Status = EventStatus.Active };
         }
-
-        public void SetStatus(EventStatus status)
-        {
-            Status = status;
-        }
     }
 }

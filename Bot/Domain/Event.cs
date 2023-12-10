@@ -5,7 +5,6 @@ namespace Bot.Domain
 {
     public class Event 
     {
-        // TODO: change from string to normal types
         [JsonConstructor]
         public Event(
             string id,
@@ -17,7 +16,7 @@ namespace Bot.Domain
             List<Participant>? participants,
             int? inlinedMessageId,
             string creator,
-            string status = "draft")
+            EventStatus status = EventStatus.Draft)
         {
             Id = id;
             Name = name;
@@ -27,7 +26,7 @@ namespace Bot.Domain
             Picture = picture;
             Participants = participants;
             InlinedMessageId = inlinedMessageId;
-            Creator = creator;
+            CreatorId = creator;
             Status = status;
         }
 
@@ -39,8 +38,8 @@ namespace Bot.Domain
         public Picture? Picture { get; set; }
         public List<Participant>? Participants { get; set; }
         public int? InlinedMessageId { get; set; }
-        public string Creator { get; set; }
-        public string Status;
+        public string CreatorId { get; set; }
+        public EventStatus Status { get; set; }
 
         public Event(long creatorId) : this(
             id: Guid.NewGuid().ToString(),
@@ -56,7 +55,7 @@ namespace Bot.Domain
         }
 
         public Event(string id, string name, string? description, Location location,
-            Date? date, Picture? picture, List<Participant>? participants, string status, string creator)
+            Date? date, Picture? picture, List<Participant>? participants, EventStatus status, string creator)
         {
             Id = id;
             Name = name;
@@ -66,7 +65,7 @@ namespace Bot.Domain
             Picture = picture;
             Participants = participants;
             Status = status;
-            Creator = creator;
+            CreatorId = creator;
         }
 
         public static Event FromJson(string json)
@@ -79,9 +78,9 @@ namespace Bot.Domain
             var date = jObject["date"]?.ToObject<Date?>();
             var picture = jObject["picture"]?.ToObject<Picture?>();
             var participants = jObject["participants"]?.ToObject<List<Participant>>() ?? new List<Participant>();
-            var status = jObject["status"]?.ToString();
+            var status = jObject["status"].ToObject<EventStatus>();
             var creator = jObject["creator"]?.ToString();
-            return new Event(id!, name!, description!, location!, date!, picture, participants, status!, creator!);
+            return new Event(id!, name!, description!, location!, date!, picture, participants, status, creator!);
         }
 
         public Dictionary<string, string> GetFields()
@@ -118,11 +117,6 @@ namespace Bot.Domain
                 "Creator" => "Организатор",
                 _ => null
             };
-        }
-        
-        public void Activate()
-        {
-            Status = "active";
         }
     }
 }

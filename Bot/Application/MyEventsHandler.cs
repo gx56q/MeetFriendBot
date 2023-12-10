@@ -8,6 +8,7 @@ using Ical.Net.DataTypes;
 using Ical.Net.Serialization;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using EventStatus = Bot.Domain.EventStatus;
 using Location = Bot.Domain.Location;
 
 namespace Bot.Application;
@@ -134,7 +135,7 @@ public class MyEventsHandler
         draft.Picture = new Picture();
         await bucket.WriteEventDraft(message.From.Id, draft);
         await bucket.WriteUserState(message.From.Id,
-            draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+            draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото изменено!", fromChatId,
             mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, message.From.Id, fromChatId, true);
@@ -145,7 +146,7 @@ public class MyEventsHandler
         string messageText;
         InlineKeyboardMarkup? keyboard;
         var fields = draft.GetFields();
-        if (draft.Status == "active")
+        if (draft.Status == EventStatus.Active)
         {
             messageText = "Редактирование встречи:\n\n" + GetEventMessageText(draft, fields);
             keyboard = GetEditEventInlineKeyboard(draft, fields);
@@ -324,7 +325,7 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var draft = await bucket.GetEventDraft(userId);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Ввод отменен", fromChatId, mainHandler.GetMainKeyboard());
     }
 
@@ -336,7 +337,7 @@ public class MyEventsHandler
         await bucket.DeleteEventPicture(draft.Id);
         draft.Picture = null;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото удалено!", chatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, chatId, true);
     }
@@ -351,7 +352,7 @@ public class MyEventsHandler
         var participants = text!.Split(' ');
         draft.Participants = participants.Select(p => new Participant(p.Trim(), UserStatus.Maybe)).ToList();
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Участники изменены!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -365,7 +366,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(userId);
         draft.Date = new Date(text);
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Дата изменена!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -380,7 +381,7 @@ public class MyEventsHandler
         // TODO logic
         draft.Location = new Location(text);
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Место изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -394,7 +395,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(userId);
         draft.Description = text;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Описание изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -408,7 +409,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(userId);
         draft.Name = text;
         await bucket.WriteEventDraft(userId, draft);
-        await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
+        await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Название изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
     }
@@ -638,7 +639,7 @@ public class MyEventsHandler
         inlineKeyboard.Add(new List<InlineKeyboardButton> { showOnMapButton, orderTaxiButton });
             
         // if (myEvent.Creator == userId.ToString())
-        if (myEvent.Creator == "349173467")
+        if (myEvent.CreatorId == "349173467")
         {
             var editButton = new InlineKeyboardButton("Редактировать встречу")
             {
@@ -759,7 +760,7 @@ public class MyEventsHandler
         var events = RetrieveEvents(userId);
         var existingEvent = events.FirstOrDefault(e => e.Id == eventId);
         // if (existingEvent != null && existingEvent.Creator == userId.ToString())
-        if (existingEvent is { Creator: "349173467" })
+        if (existingEvent is { CreatorId: "349173467" })
         {
             await bucket.WriteUserState(userId, State.EditingEvent);
             existingEvent.InlinedMessageId = messageId;
