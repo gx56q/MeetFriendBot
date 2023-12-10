@@ -1,4 +1,4 @@
-namespace Bot;
+namespace Bot.Infrastructure;
 
 public static class PluralizeExtensions
 {

@@ -1,12 +1,13 @@
 using System.Text.RegularExpressions;
-using Bot.Services.S3Storage;
-using Bot.Services.Telegram.Commands;
-using Bot.Services.YDB;
+using Bot.Infrastructure.S3Storage;
+using Bot.Domain;
+using Bot.Application.Commands;
+using Bot.Infrastructure.YDB;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-namespace Bot.Services.Telegram;
+namespace Bot.Application;
 
 public class HandleUpdateService
 {

@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Bot.Services.Telegram
+namespace Bot.Domain
 {
     public class Participant
     {

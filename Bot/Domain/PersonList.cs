@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Bot.Services.Telegram
+namespace Bot.Domain
 {
     public class PersonList
     {

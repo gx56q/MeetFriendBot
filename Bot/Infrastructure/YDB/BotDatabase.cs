@@ -4,7 +4,7 @@ using Ydb.Sdk.Table;
 using Ydb.Sdk.Value;
 using Ydb.Sdk.Yc;
 
-namespace Bot.Services.YDB;
+namespace Bot.Infrastructure.YDB;
 
 public class BotDatabase : IBotDatabase
 {

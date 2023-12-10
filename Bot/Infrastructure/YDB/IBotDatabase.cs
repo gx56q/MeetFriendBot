@@ -1,7 +1,6 @@
-using System.Collections.Generic;
 using Ydb.Sdk.Value;
 
-namespace Bot.Services.YDB;
+namespace Bot.Infrastructure.YDB;
 
 public interface IBotDatabase
 {

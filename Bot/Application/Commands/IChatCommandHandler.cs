@@ -1,6 +1,6 @@
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Bot.Services.Telegram.Commands;
+namespace Bot.Application.Commands;
 
 public interface IChatCommandHandler
 {

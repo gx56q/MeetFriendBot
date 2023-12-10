@@ -1,6 +1,6 @@
 using AspNetCore.Yandex.ObjectStorage;
 
-namespace Bot.Services.S3Storage;
+namespace Bot.Infrastructure.S3Storage;
 
 public static class BotBucketService
 {

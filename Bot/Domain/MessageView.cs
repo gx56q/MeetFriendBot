@@ -5,7 +5,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 
-namespace Bot.Services.Telegram;
+namespace Bot.Domain;
 
 public interface IMessageView
 {

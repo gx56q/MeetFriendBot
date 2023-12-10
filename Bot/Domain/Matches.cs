@@ -1,4 +1,4 @@
-namespace Bot.Services.Telegram;
+namespace Bot.Domain;
 
 public class Matches
 {

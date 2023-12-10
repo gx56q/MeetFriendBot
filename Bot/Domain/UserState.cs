@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Bot.Services.Telegram;
+namespace Bot.Domain;
 
 public class UserState
 {
@@ -20,20 +20,4 @@ public class UserState
     {
         curState = state;
     }
-}
-
-public enum State
-{
-    Start,
-    CreatingEvent,
-    EditingEvent,
-    EditingName,
-    EditingDescription,
-    EditingLocation,
-    EditingDate,
-    EditingPicture,
-    EditingParticipants,
-    EditingList,
-    EditingListName,
-    EditingListParticipants
 }
