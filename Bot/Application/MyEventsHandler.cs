@@ -349,7 +349,7 @@ public class MyEventsHandler
 
         var draft = await bucket.GetEventDraft(userId);
         var participants = text!.Split(' ');
-        draft.Participants = participants.Select(p => new Participant(p.Trim(), Status.Maybe)).ToList();
+        draft.Participants = participants.Select(p => new Participant(p.Trim(), UserStatus.Maybe)).ToList();
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Участники изменены!", fromChatId, mainHandler.GetMainKeyboard());
@@ -520,20 +520,20 @@ public class MyEventsHandler
         var myEvent = events.FirstOrDefault(e => e.Id == eventId);
         if (myEvent != null)
         {
-            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")?.ParticipantStatus;
-            if (currentStatus == Status.Maybe)
+            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")?.ParticipantUserStatus;
+            if (currentStatus == UserStatus.Maybe)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus = Status.WillGo;
+                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
             }
-            else if (currentStatus == Status.WillGo)
+            else if (currentStatus == UserStatus.WillGo)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus = Status.WontGo;
+                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus = UserStatus.WontGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы не идете");
             }
-            else if (currentStatus == Status.WontGo)
+            else if (currentStatus == UserStatus.WontGo)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus = Status.WillGo;
+                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
             }
             await HandleViewEventAction(callbackQuery, true);
@@ -602,10 +602,10 @@ public class MyEventsHandler
         firstRow.Add(addToCalendarButton);
         if (myEvent.Participants != null && myEvent.Participants.Any(p => p.UserId == "xoposhiy"))
         {
-            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantStatus;
+            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus;
             switch (currentStatus)
             {
-                case Status.Maybe or Status.WontGo:
+                case UserStatus.Maybe or UserStatus.WontGo:
                 {
                     var willGoButton = new InlineKeyboardButton("\ud83d\udc4d Иду")
                     {
@@ -614,7 +614,7 @@ public class MyEventsHandler
                     firstRow.Add(willGoButton);
                     break;
                 }
-                case Status.WillGo:
+                case UserStatus.WillGo:
                 {
                     var wontGoButton = new InlineKeyboardButton("\ud83d\udc4e Не иду")
                     {

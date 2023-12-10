@@ -5,34 +5,34 @@ namespace Bot.Domain
     public class Participant
     {
         public string UserId { get; }
-        public Status ParticipantStatus { get; set; }
+        public UserStatus ParticipantUserStatus { get; set; }
 
         public Participant(string userId)
         {
             UserId = userId;
-            ParticipantStatus = Status.Maybe;
+            ParticipantUserStatus = UserStatus.Maybe;
         }
 
         [JsonConstructor]
-        public Participant(string userId, Status participantStatus)
+        public Participant(string userId, UserStatus participantUserStatus)
         {
             UserId = userId;
-            ParticipantStatus = participantStatus;
+            ParticipantUserStatus = participantUserStatus;
         }
         
         public string GetEmojiForStatus()
         {
-            return ParticipantStatus switch
+            return ParticipantUserStatus switch
             {
-                Status.WillGo => "\ud83d\udc4d",
-                Status.WontGo => "\ud83d\udc4e",
-                Status.Maybe => "\ud83e\udd37",
+                UserStatus.WillGo => "\ud83d\udc4d",
+                UserStatus.WontGo => "\ud83d\udc4e",
+                UserStatus.Maybe => "\ud83e\udd37",
                 _ => ""
             };
         }
     }
 
-    public enum Status
+    public enum UserStatus
     {
         WillGo,
         WontGo,
