@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Bot.Domain
 {
-    public class Event
+    public class Event 
     {
         // TODO: change from string to normal types
         [JsonConstructor]
@@ -11,9 +11,9 @@ namespace Bot.Domain
             string id,
             string? name,
             string? description,
-            string? location,
-            string? date,
-            bool? picture,
+            Location? location,
+            Date? date,
+            Picture? picture,
             List<Participant>? participants,
             int? inlinedMessageId,
             string creator,
@@ -34,13 +34,13 @@ namespace Bot.Domain
         public string Id { get; set; }
         public string? Name { get; set; }
         public string? Description { get; set; }
-        public string? Location { get; set; }
-        public string? Date { get; set; }
-        public bool? Picture { get; set; }
+        public Location? Location { get; set; }
+        public Date? Date { get; set; }
+        public Picture? Picture { get; set; }
         public List<Participant>? Participants { get; set; }
         public int? InlinedMessageId { get; set; }
         public string Creator { get; set; }
-        public string Status = "draft";
+        public string Status;
 
         public Event(long creatorId) : this(
             id: Guid.NewGuid().ToString(),
@@ -55,8 +55,8 @@ namespace Bot.Domain
         {
         }
 
-        public Event(string id, string name, string? description, string location,
-            string date, bool? picture, List<Participant> participants, string status, string creator)
+        public Event(string id, string name, string? description, Location location,
+            Date? date, Picture? picture, List<Participant>? participants, string status, string creator)
         {
             Id = id;
             Name = name;
@@ -72,16 +72,16 @@ namespace Bot.Domain
         public static Event FromJson(string json)
         {
             var jObject = JObject.Parse(json);
-            var id = jObject["id"]?.ToString();
+            var id = jObject["id"].ToString();
             var name = jObject["name"]?.ToString();
             var description = jObject["description"]?.ToString();
-            var location = jObject["location"]?.ToString();
-            var date = jObject["date"]?.ToString();
-            var picture = jObject["picture"]?.ToObject<bool?>();
+            var location = jObject["location"]?.ToObject<Location?>();
+            var date = jObject["date"]?.ToObject<Date?>();
+            var picture = jObject["picture"]?.ToObject<Picture?>();
             var participants = jObject["participants"]?.ToObject<List<Participant>>() ?? new List<Participant>();
             var status = jObject["status"]?.ToString();
             var creator = jObject["creator"]?.ToString();
-            return new Event(id!, name!, description, location!, date!, picture, participants, status!, creator!);
+            return new Event(id!, name!, description!, location!, date!, picture, participants, status!, creator!);
         }
 
         public Dictionary<string, string> GetFields()
@@ -119,20 +119,10 @@ namespace Bot.Domain
                 _ => null
             };
         }
-
-        public void SetPicture(bool? picture)
-        {
-            Picture = picture;
-        }
-
+        
         public void Activate()
         {
             Status = "active";
-        }
-
-        public void SetStatus(string status)
-        {
-            Status = status;
         }
     }
 }

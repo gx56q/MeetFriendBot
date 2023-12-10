@@ -8,6 +8,7 @@ using Ical.Net.DataTypes;
 using Ical.Net.Serialization;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using Location = Bot.Domain.Location;
 
 namespace Bot.Application;
 
@@ -56,7 +57,7 @@ public class MyEventsHandler
         {
             Summary = data.Name,
             Description = data.Description,
-            Location = data.Location,
+            Location = data.Location?.ToString() ?? "",
             DtStart = new CalDateTime(Convert.ToDateTime(data.Date), "UTC")
         };
         
@@ -130,7 +131,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(message.From!.Id);
         var fileId = message.Photo!.Last().FileId;
         await bucket.WriteEventPicture(draft.Id, fileId);
-        draft.Picture = true;
+        draft.Picture = new Picture();
         await bucket.WriteEventDraft(message.From.Id, draft);
         await bucket.WriteUserState(message.From.Id,
             draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
@@ -165,7 +166,7 @@ public class MyEventsHandler
             draft.InlinedMessageId = message.MessageId;
             await bucket.WriteEventDraft(userId, draft);
         }
-        else if (draft.Picture == true)
+        else if (draft.Picture is not null)
         {
             await messageView.EditInlineMessageWithPhoto(messageText, chatId, draft.InlinedMessageId!.Value, keyboard,
                 null);
@@ -333,7 +334,7 @@ public class MyEventsHandler
         var chatId = message.Chat.Id;
         var draft = await bucket.GetEventDraft(userId);
         await bucket.DeleteEventPicture(draft.Id);
-        draft.Picture = false;
+        draft.Picture = null;
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото удалено!", chatId, mainHandler.GetMainKeyboard());
@@ -362,7 +363,7 @@ public class MyEventsHandler
         var text = message.Text;
 
         var draft = await bucket.GetEventDraft(userId);
-        draft.Date = text;
+        draft.Date = new Date(text);
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Дата изменена!", fromChatId, mainHandler.GetMainKeyboard());
@@ -377,7 +378,7 @@ public class MyEventsHandler
 
         var draft = await bucket.GetEventDraft(userId);
         // TODO logic
-        draft.Location = text;
+        draft.Location = new Location(text);
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == "active" ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Место изменено!", fromChatId, mainHandler.GetMainKeyboard());
@@ -450,7 +451,7 @@ public class MyEventsHandler
         var messageText = "Новая встреча\n\n" + GetEventMessageText(draft, fields);
         var inlineKeyboard = GetNewEventInlineKeyboard(fields);
         Message? replyMessage;
-        if (draft.Picture == true)
+        if (draft.Picture is not null)
         {
             var pictureId = await bucket.GetEventPicture(draft.Id);
             replyMessage =
@@ -578,7 +579,7 @@ public class MyEventsHandler
             }
 
             // TODO: somehow check if message has photo
-            if (myEvent.Picture == false)
+            if (myEvent.Picture is null)
                 await messageView.EditInlineMessage(messageText, chatId, messageId, inlineKeyboard);
             else
             {
@@ -628,11 +629,11 @@ public class MyEventsHandler
         // TODO: show only if in coordinates
         var showOnMapButton = new InlineKeyboardButton("\ud83d\uddfa Карта")
         {
-            Url = GetMapLink(myEvent.Location!)
+            Url = GetMapLink(myEvent.Location.Loc!)
         };
         var orderTaxiButton = new InlineKeyboardButton("\ud83d\ude95 Такси")
         {
-            Url = GetTaxiLink(myEvent.Location!)
+            Url = GetTaxiLink(myEvent.Location.Loc!)
         };
         inlineKeyboard.Add(new List<InlineKeyboardButton> { showOnMapButton, orderTaxiButton });
             
@@ -758,7 +759,7 @@ public class MyEventsHandler
         var events = RetrieveEvents(userId);
         var existingEvent = events.FirstOrDefault(e => e.Id == eventId);
         // if (existingEvent != null && existingEvent.Creator == userId.ToString())
-        if (existingEvent != null && existingEvent.Creator == "349173467")
+        if (existingEvent is { Creator: "349173467" })
         {
             await bucket.WriteUserState(userId, State.EditingEvent);
             existingEvent.InlinedMessageId = messageId;
@@ -766,7 +767,7 @@ public class MyEventsHandler
             var fields = existingEvent.GetFields();
             var messageText = "Редактирование события\n\n" + GetEventMessageText(existingEvent, fields);
             var inlineKeyboard = GetEditEventInlineKeyboard(existingEvent, fields);
-            if (existingEvent.Picture == true)
+            if (existingEvent.Picture is not null)
                 await messageView.EditInlineMessageWithPhoto(messageText, chatId, messageId, inlineKeyboard, 
                     await bucket.GetEventPicture(existingEvent.Id));
             else

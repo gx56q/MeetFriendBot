@@ -2,7 +2,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Bot.Domain
 {
-    public class PersonList: Entity<string, string>
+    public class PersonList
     {
         public string Id { get; }
         public string Name { get; set; }
@@ -17,7 +17,7 @@ namespace Bot.Domain
             Status = "draft";
         }
 
-        private PersonList(string id, string name, List<string> participants)
+        private PersonList(string id, string name, List<string> participants) 
         {
             Id = id;
             Name = name;
