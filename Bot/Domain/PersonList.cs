@@ -2,14 +2,14 @@ using Newtonsoft.Json.Linq;
 
 namespace Bot.Domain
 {
-    public class PersonList
+    public class PersonList: Entity<string, string>
     {
         public string Id { get; }
         public string Name { get; set; }
         public List<string> Participants { get; set; }
         public string Status { get; set; }
 
-        public PersonList(string name)
+        public PersonList(string name, string id = null, string status = "draft")
         {
             Id = Guid.NewGuid().ToString();
             Name = name;
