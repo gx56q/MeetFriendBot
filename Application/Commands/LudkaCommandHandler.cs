@@ -1,4 +1,5 @@
 using Bot.Domain;
+using Domain;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 

@@ -1,7 +1,7 @@
 using AspNetCore.Yandex.ObjectStorage.Configuration;
 using Microsoft.Extensions.Configuration;
 
-namespace Bot.Infrastructure;
+namespace Infrastructure;
 
 public class Configuration
 {

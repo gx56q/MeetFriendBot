@@ -1,7 +1,10 @@
 using System.Text;
+using Application;
 using Bot.Infrastructure.S3Storage;
 using Bot.Infrastructure.YDB;
 using Bot.Domain;
+using Domain;
+using Infrastructure.S3Storage;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 

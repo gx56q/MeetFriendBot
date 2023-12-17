@@ -1,10 +1,12 @@
 using System.Net;
 using AspNetCore.Yandex.ObjectStorage;
 using AspNetCore.Yandex.ObjectStorage.Object;
+using Bot.Domain;
+using Domain;
 using FluentResults;
 using Newtonsoft.Json;
 
-namespace Bot.Infrastructure.S3Storage;
+namespace Infrastructure.S3Storage;
 
 
 public class S3ApiException : Exception
@@ -36,13 +38,13 @@ public class S3Bucket : IBucket
         objectService = storageService.ObjectService;
     }
 
-    public async Task<Domain.State> GetUserState(long userId)
+    public async Task<State> GetUserState(long userId)
     {
         var filename = GetFilename(StateFolder+"/"+userId+"_state");
         var response = await objectService.GetAsync(filename);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return Domain.State.Start;
+            return State.Start;
         }
         if (!response.IsSuccessStatusCode)
         {
@@ -54,10 +56,10 @@ public class S3Bucket : IBucket
         }
         var body = await response.ReadAsByteArrayAsync();
         var content = System.Text.Encoding.UTF8.GetString(body.Value);
-        return JsonConvert.DeserializeObject<Domain.State>(content);
+        return JsonConvert.DeserializeObject<State>(content);
     }
     
-    public async Task WriteUserState(long userId, Domain.State state)
+    public async Task WriteUserState(long userId, State state)
     {
         var filename = GetFilename(StateFolder+"/"+userId+"_state");
         var response = await objectService.PutAsync(
@@ -91,7 +93,7 @@ public class S3Bucket : IBucket
         }
     }
     
-    public async Task<Domain.Event> GetEventDraft(long userId)
+    public async Task<Event> GetEventDraft(long userId)
     {
         var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
         var response = await objectService.GetAsync(filename);

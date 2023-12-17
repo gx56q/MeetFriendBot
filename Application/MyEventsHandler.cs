@@ -1,17 +1,18 @@
 using System.Text;
-using Bot.Infrastructure.S3Storage;
-using Bot.Infrastructure.YDB;
 using Bot.Domain;
+using Bot.Infrastructure.YDB;
+using Domain;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
 using Ical.Net.Serialization;
+using Infrastructure.S3Storage;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using EventStatus = Bot.Domain.EventStatus;
 using Location = Bot.Domain.Location;
 
-namespace Bot.Application;
+namespace Application;
 
 public class MyEventsHandler
 {

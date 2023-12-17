@@ -1,11 +1,11 @@
-using Telegram.Bot.Types;
+using Bot.Domain;
 
-namespace Bot.Infrastructure.S3Storage;
+namespace Infrastructure.S3Storage;
 
 public interface IBucket
 {
-    Task<Domain.State> GetUserState(long userId);
-    Task WriteUserState(long userId, Domain.State state);
+    Task<State> GetUserState(long userId);
+    Task WriteUserState(long userId, State state);
     Task WriteEventDraft(long userId, Domain.Event draft);
     Task<Domain.Event> GetEventDraft(long userId);
     Task ClearEventDraft(long userId);

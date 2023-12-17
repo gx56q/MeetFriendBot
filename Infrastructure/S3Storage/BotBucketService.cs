@@ -1,4 +1,5 @@
 using AspNetCore.Yandex.ObjectStorage;
+using Infrastructure;
 
 namespace Bot.Infrastructure.S3Storage;
 

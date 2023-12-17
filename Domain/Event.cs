@@ -1,7 +1,8 @@
+using Bot.Domain;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Bot.Domain
+namespace Domain
 {
     public class Event : Entity<string>
     {

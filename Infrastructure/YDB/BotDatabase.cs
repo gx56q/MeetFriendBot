@@ -1,10 +1,13 @@
+using Bot.Infrastructure;
+using Bot.Infrastructure.YDB;
 using Ydb.Sdk;
 using Ydb.Sdk.Auth;
-using Ydb.Sdk.Table;
+using Ydb.Sdk.Services.Table;
 using Ydb.Sdk.Value;
 using Ydb.Sdk.Yc;
 
-namespace Bot.Infrastructure.YDB;
+
+namespace Infrastructure.YDB;
 
 public class BotDatabase : IBotDatabase
 {

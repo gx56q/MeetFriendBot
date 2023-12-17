@@ -1,10 +1,11 @@
 using Bot.Domain;
-using Bot.Infrastructure.S3Storage;
 using Bot.Infrastructure.YDB;
+using Domain;
+using Infrastructure.S3Storage;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Bot.Application;
+namespace Application;
 
 public interface IMainHandler
 {
