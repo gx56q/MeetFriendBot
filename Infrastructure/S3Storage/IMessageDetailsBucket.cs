@@ -1,4 +1,4 @@
-using Bot.Domain;
+using Domain;
 
 namespace Infrastructure.S3Storage;
 

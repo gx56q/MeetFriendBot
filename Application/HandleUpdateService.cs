@@ -1,10 +1,8 @@
 using System.Text.RegularExpressions;
-using Bot.Application;
-using Bot.Application.Commands;
-using Bot.Domain;
-using Bot.Infrastructure.YDB;
+using Application.Commands;
 using Domain;
 using Infrastructure.S3Storage;
+using Infrastructure.YDB;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;

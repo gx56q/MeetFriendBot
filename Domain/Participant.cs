@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Bot.Domain
+namespace Domain
 {
     public class Participant : Entity<string>
 

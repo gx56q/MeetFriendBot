@@ -1,5 +1,3 @@
-using Bot.Infrastructure;
-using Bot.Infrastructure.YDB;
 using Ydb.Sdk;
 using Ydb.Sdk.Auth;
 using Ydb.Sdk.Services.Table;

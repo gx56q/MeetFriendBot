@@ -1,9 +1,4 @@
-﻿using Application;
-using Bot.Infrastructure.S3Storage;
-using Bot.Infrastructure;
-using Bot.Domain;
-using Bot.Application.Commands;
-using Bot.Infrastructure.YDB;
+﻿using Application.Commands;
 using Domain;
 using Grpc.Core.Logging;
 using Infrastructure;
@@ -15,11 +10,12 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Yandex.Cloud.Functions;
+
 // using TestMultiple;
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
 
-namespace Bot.Application;
+namespace Application;
 
 public class Response
 {

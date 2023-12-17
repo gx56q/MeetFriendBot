@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Bot.Domain
+namespace Domain
 {
     public class PersonList : Entity<string>
     {

@@ -1,6 +1,6 @@
 using Ydb.Sdk.Value;
 
-namespace Bot.Infrastructure.YDB;
+namespace Infrastructure.YDB;
 
 public class EventRepo
 {

@@ -1,7 +1,6 @@
 using System.Net;
 using AspNetCore.Yandex.ObjectStorage;
 using AspNetCore.Yandex.ObjectStorage.Object;
-using Bot.Domain;
 using Domain;
 using FluentResults;
 using Newtonsoft.Json;

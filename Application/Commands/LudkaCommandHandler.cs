@@ -1,9 +1,8 @@
-using Bot.Domain;
 using Domain;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Bot.Application.Commands;
+namespace Application.Commands;
 
 public class LudkaCommandHandler : IChatCommandHandler
 {

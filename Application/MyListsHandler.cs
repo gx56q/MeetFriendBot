@@ -1,14 +1,11 @@
 using System.Text;
-using Application;
-using Bot.Infrastructure.S3Storage;
-using Bot.Infrastructure.YDB;
-using Bot.Domain;
 using Domain;
 using Infrastructure.S3Storage;
+using Infrastructure.YDB;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Bot.Application;
+namespace Application;
 
 public class MyListsHandler
 {

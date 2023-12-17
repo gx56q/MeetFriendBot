@@ -1,4 +1,3 @@
-using Bot.Domain;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

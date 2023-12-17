@@ -1,4 +1,4 @@
-namespace Bot.Domain;
+namespace Domain;
 
 public class Picture : Entity<string>
 {
