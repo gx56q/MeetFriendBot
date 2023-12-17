@@ -2,33 +2,31 @@ using Newtonsoft.Json;
 
 namespace Bot.Domain
 {
-    public class Participant
+    public class Participant : Entity<string>
+
     {
-        public string UserId { get; }
-        public UserStatus ParticipantUserStatus { get; set; }
+    public UserStatus ParticipantUserStatus { get; set; }
 
-        public Participant(string userId)
-        {
-            UserId = userId;
-            ParticipantUserStatus = UserStatus.Maybe;
-        }
+    public Participant(string userId) : base(userId)
+    {
+        ParticipantUserStatus = UserStatus.Maybe;
+    }
 
-        [JsonConstructor]
-        public Participant(string userId, UserStatus participantUserStatus)
+    [JsonConstructor]
+    public Participant(string userId, UserStatus participantUserStatus) : base(userId)
+    {
+        ParticipantUserStatus = participantUserStatus;
+    }
+
+    public string GetEmojiForStatus()
+    {
+        return ParticipantUserStatus switch
         {
-            UserId = userId;
-            ParticipantUserStatus = participantUserStatus;
-        }
-        
-        public string GetEmojiForStatus()
-        {
-            return ParticipantUserStatus switch
-            {
-                UserStatus.WillGo => "\ud83d\udc4d",
-                UserStatus.WontGo => "\ud83d\udc4e",
-                UserStatus.Maybe => "\ud83e\udd37",
-                _ => ""
-            };
-        }
+            UserStatus.WillGo => "\ud83d\udc4d",
+            UserStatus.WontGo => "\ud83d\udc4e",
+            UserStatus.Maybe => "\ud83e\udd37",
+            _ => ""
+        };
+    }
     }
 }

@@ -1,13 +1,11 @@
 namespace Bot.Domain;
 
-public class Entity<TId, TStatus>
+public class Entity<TId>
 {
     public TId Id;
-    public TStatus Status;
 
-    public Entity(TId id, TStatus status)
+    public Entity(TId id)
     {
         Id = id;
-        Status = status;
     }
 }

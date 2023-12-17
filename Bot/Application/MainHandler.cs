@@ -68,7 +68,7 @@ public class MainHandler : IMainHandler
             ResizeKeyboard = true 
         }; 
         switch (field.ToLower())
-        { 
+        {
             case "listname":
                 await messageView.SayWithKeyboard("Отправьте название или нажмите кнопку назад для отмены", 
                     chatId, key);

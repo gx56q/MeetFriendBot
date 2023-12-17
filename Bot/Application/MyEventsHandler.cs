@@ -132,7 +132,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(message.From!.Id);
         var fileId = message.Photo!.Last().FileId;
         await bucket.WriteEventPicture(draft.Id, fileId);
-        draft.Picture = new Picture();
+        draft.Picture = new Picture("0"); // TO-DO: 0 index?? 
         await bucket.WriteEventDraft(message.From.Id, draft);
         await bucket.WriteUserState(message.From.Id,
             draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
@@ -225,7 +225,7 @@ public class MyEventsHandler
         messageText.AppendLine($"{participantsField.Value}:");
         foreach (var participant in participantsValue)
         {
-            messageText.AppendLine($"- <a href=\"@{participant.UserId}\"> @{participant.UserId}</a>" +
+            messageText.AppendLine($"- <a href=\"@{participant.Id}\"> @{participant.Id}</a>" +
                                    $" ({participant.GetEmojiForStatus()})");
         }
 
@@ -521,20 +521,20 @@ public class MyEventsHandler
         var myEvent = events.FirstOrDefault(e => e.Id == eventId);
         if (myEvent != null)
         {
-            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")?.ParticipantUserStatus;
+            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")?.ParticipantUserStatus;
             if (currentStatus == UserStatus.Maybe)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
+                myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
             }
             else if (currentStatus == UserStatus.WillGo)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus = UserStatus.WontGo;
+                myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus = UserStatus.WontGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы не идете");
             }
             else if (currentStatus == UserStatus.WontGo)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
+                myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
                 await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
             }
             await HandleViewEventAction(callbackQuery, true);
@@ -601,9 +601,9 @@ public class MyEventsHandler
                 CallbackData = $"addToCalendar_{myEvent.Id}"
             };
         firstRow.Add(addToCalendarButton);
-        if (myEvent.Participants != null && myEvent.Participants.Any(p => p.UserId == "xoposhiy"))
+        if (myEvent.Participants != null && myEvent.Participants.Any(p => p.Id == "xoposhiy"))
         {
-            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.UserId == "xoposhiy")!.ParticipantUserStatus;
+            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus;
             switch (currentStatus)
             {
                 case UserStatus.Maybe or UserStatus.WontGo:

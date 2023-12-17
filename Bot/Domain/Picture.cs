@@ -1,6 +1,8 @@
 namespace Bot.Domain;
 
-public class Picture
+public class Picture : Entity<string>
 {
-    public string Id { get; set; }
+    public Picture(string id) : base(id)
+    {
+    }
 }

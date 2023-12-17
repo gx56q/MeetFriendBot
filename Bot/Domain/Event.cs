@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Bot.Domain
 {
-    public class Event 
+    public class Event : Entity<string>
     {
         [JsonConstructor]
         public Event(
@@ -16,9 +16,8 @@ namespace Bot.Domain
             List<Participant>? participants,
             int? inlinedMessageId,
             string creator,
-            EventStatus status = EventStatus.Draft)
+            EventStatus status = EventStatus.Draft) : base(id)
         {
-            Id = id;
             Name = name;
             Description = description;
             Location = location;
@@ -29,8 +28,6 @@ namespace Bot.Domain
             CreatorId = creator;
             Status = status;
         }
-
-        public string Id { get; set; }
         public string? Name { get; set; }
         public string? Description { get; set; }
         public Location? Location { get; set; }
@@ -55,9 +52,8 @@ namespace Bot.Domain
         }
 
         public Event(string id, string name, string? description, Location location,
-            Date? date, Picture? picture, List<Participant>? participants, EventStatus status, string creator)
+            Date? date, Picture? picture, List<Participant>? participants, EventStatus status, string creator) : base(id)
         {
-            Id = id;
             Name = name;
             Description = description;
             Location = location;

@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot", "Bot\Bot.csproj", "{838476AB-D822-4B6F-A4E0-E8D2EE54119B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMultiple", "TestMultiple\TestMultiple.csproj", "{CDD3A838-1177-4D64-A76C-58928D68C90D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,9 +12,5 @@ Global
 		{838476AB-D822-4B6F-A4E0-E8D2EE54119B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{838476AB-D822-4B6F-A4E0-E8D2EE54119B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{838476AB-D822-4B6F-A4E0-E8D2EE54119B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CDD3A838-1177-4D64-A76C-58928D68C90D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CDD3A838-1177-4D64-A76C-58928D68C90D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CDD3A838-1177-4D64-A76C-58928D68C90D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CDD3A838-1177-4D64-A76C-58928D68C90D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

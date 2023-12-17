@@ -2,22 +2,20 @@ using Newtonsoft.Json.Linq;
 
 namespace Bot.Domain
 {
-    public class PersonList
+    public class PersonList : Entity<string>
     {
-        public string Id { get; }
         public string Name { get; set; }
         public List<Participant> Participants { get; set; }
         public EventStatus Status { get; set; }
 
-        public PersonList(string name)
+        public PersonList(string name) : base(Guid.NewGuid().ToString())
         {
-            Id = Guid.NewGuid().ToString();
             Name = name;
             Participants = new List<Participant>();
             Status = EventStatus.Draft;
         }
 
-        private PersonList(string id, string name, List<Participant> participants)
+        private PersonList(string id, string name, List<Participant> participants) : base(id)
         {
             Id = id;
             Name = name;
