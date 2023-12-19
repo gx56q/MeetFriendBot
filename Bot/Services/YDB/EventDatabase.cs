@@ -1,5 +1,6 @@
 using System.Text;
 using Bot.Services.Telegram;
+using Newtonsoft.Json;
 using Ydb.Sdk.Value;
 
 namespace Bot.Services.YDB;
@@ -29,15 +30,14 @@ public class EventDatabase : IEventDatabase
         var id = YdbValue.MakeUtf8(personList.Id.ToString());
         var name = YdbValue.MakeUtf8(personList.Name);
         var creator = YdbValue.MakeInt64(personList.Creator);
-        var participants = YdbValue.MakeList((IReadOnlyList<YdbValue>)
-            personList.Participants.Select(YdbValue.MakeInt64));
+        var participants = YdbValue.MakeJson(JsonConvert.SerializeObject(personList.Participants));
         
         await botDatabase.ExecuteModify($@"
             DECLARE $id AS Utf8;
             DECLARE $name AS Utf8;
             DECLARE $description AS Utf8;
             DECLARE $creator AS Int64;
-            DECLARE $participants AS List<Int64>;
+            DECLARE $participants AS Json;
 
             UPSERT INTO {PersonListsTableName} ( id, name, description, creator, participants )
             VALUES ( $id, $name, $description, $creator, $participants )
@@ -58,12 +58,7 @@ public class EventDatabase : IEventDatabase
         var description = YdbValue.MakeUtf8(userEvent.Description);
         var date = YdbValue.MakeDatetime(userEvent.Date ?? DateTime.Now + TimeSpan.FromDays(1));
         var picture = YdbValue.MakeUtf8(userEvent.Picture);
-        var participants = YdbValue.MakeList((IReadOnlyList<YdbValue>)userEvent.Participants.Select(p =>
-            YdbValue.MakeStruct(new Dictionary<string, YdbValue>
-            {
-                { "user_id", YdbValue.MakeInt64(p.UserId) },
-                { "status", YdbValue.MakeUtf8(p.ParticipantStatus.ToString()) }
-            })));
+        var participants = YdbValue.MakeJson(JsonConvert.SerializeObject(userEvent.Participants));
         var creator = YdbValue.MakeInt64(userEvent.Creator);
         
         await botDatabase.ExecuteModify($@"
@@ -72,10 +67,7 @@ public class EventDatabase : IEventDatabase
             DECLARE $description AS Utf8;
             DECLARE $date AS DateTime;
             DECLARE $picture AS Utf8;
-            DECLARE $participants AS List<Struct<
-                user_id: Int64,
-                status: Utf8
-            >>;
+            DECLARE $participants AS Json;
             DECLARE $creator AS Int64;
 
             UPSERT INTO {EventsTableName} ( id, name, description, date, picture, participants, creator )
@@ -137,7 +129,7 @@ public class EventDatabase : IEventDatabase
         return Event.CreateFromYdb(row);
     }
 
-    public async Task<IEnumerable<Dictionary<string, string>>> GetPersonListsByUserId(long userId)
+    public async Task<IEnumerable<ISimple>> GetPersonListsByUserId(long userId)
     {
         var rows = await botDatabase.ExecuteFind($@"
             DECLARE $user_id AS Int64;
@@ -153,7 +145,7 @@ public class EventDatabase : IEventDatabase
         
         if (rows is null || !rows.Any())
         {
-            return new List<Dictionary<string, string>>();
+            return new List<ISimple>();
         }
         
         var personListsStructs = rows.First()["person_lists"].GetList();
@@ -164,13 +156,10 @@ public class EventDatabase : IEventDatabase
         var personListsNames = personLists.Select(e =>
             Encoding.UTF8.GetString(e["name"].GetString()));
         
-        return personListsIds.Zip(personListsNames, (id, name) => new Dictionary<string, string>
-        {
-            {id, name}
-        });
+        return personListsIds.Zip(personListsNames, (id, name) => new SimplePersonList(id, name));
     }
     
-    public async Task<IEnumerable<Dictionary<string, string>>> GetEventsByUserId(long userId)
+    public async Task<IEnumerable<ISimple>> GetEventsByUserId(long userId)
     {
         var rows = await botDatabase.ExecuteFind($@"
             DECLARE $user_id AS Int64;
@@ -185,7 +174,7 @@ public class EventDatabase : IEventDatabase
 
         if (rows is null || !rows.Any())
         {
-            return new List<Dictionary<string, string>>();
+            return new List<ISimple>();
         }
         
         var eventsStructs = rows.First()["events"].GetList();
@@ -196,10 +185,7 @@ public class EventDatabase : IEventDatabase
         var eventsNames = events.Select(e => 
             Encoding.UTF8.GetString(e["name"].GetString()));
         
-        return eventsIds.Zip(eventsNames, (id, name) => new Dictionary<string, string>
-        {
-            {id, name}
-        });
+        return eventsIds.Zip(eventsNames, (id, name) => new SimpleEvent(id, name));
     }
 
     public async Task ClearAll()
@@ -219,11 +205,8 @@ public class EventDatabase : IEventDatabase
                 name String NOT NULL,
                 description String,
                 date DateTime NOT NULL,
-                picture string,
-                participants List<Struct<
-                    user_id: Int64,
-                    status: String
-                >>,
+                picture String,
+                participants Json,
                 creator Int64 NOT NULL,
                 PRIMARY KEY (id)
             );
@@ -237,15 +220,12 @@ public class EventDatabase : IEventDatabase
             );
             CREATE TABLE {UsersTableName} (
                 id Int64 NOT NULL,
-                first_name String NOT NULL,
+                telegram_id Int64,
+                first_name String,
                 last_name String,
                 username String,
-                events List<Struct<
-                    id: String,
-                    name: String>>,
-                person_lists List<Struct<
-                    id: String,
-                    name: String>>,
+                events Json,
+                person_lists Json,
                 PRIMARY KEY (id)
             );
         ");

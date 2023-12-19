@@ -8,6 +8,6 @@ public interface IEventDatabase
     Task CreatePersonList(PersonList personList);
     Task<Event?> GetEventById(string guid);
     Task<PersonList?> GetPersonListById(string guid);
-    Task<IEnumerable<Dictionary<string, string>>> GetEventsByUserId(long userId);
-    Task<IEnumerable<Dictionary<string, string>>> GetPersonListsByUserId(long userId);
+    Task<IEnumerable<ISimple>> GetEventsByUserId(long userId);
+    Task<IEnumerable<ISimple>> GetPersonListsByUserId(long userId);
 }
