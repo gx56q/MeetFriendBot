@@ -16,7 +16,7 @@ public class HandleUpdateService
     private readonly IBucket bucket;
 
     private readonly MyEventsHandler myEventsHandler;
-    private readonly MyListsHandler myListsHandler;
+    private readonly MyListsHandler myListsHandlerHandler;
     private readonly IMainHandler mainHandler;
     
     public HandleUpdateService(
@@ -28,10 +28,10 @@ public class HandleUpdateService
         this.messageView = messageView;
         this.commands = commands;
         this.bucket = bucket;
-        
+
         mainHandler = new MainHandler(messageView, bucket, botDatabase);
         myEventsHandler = new MyEventsHandler(messageView, bucket, botDatabase, mainHandler);
-        myListsHandler = new MyListsHandler(messageView, bucket, botDatabase, mainHandler);
+        myListsHandlerHandler = new MyListsHandler(messageView, bucket, mainHandler);
     }
 
     public async Task Handle(Update update)
@@ -110,13 +110,13 @@ public class HandleUpdateService
         switch (state)
         {
             case State.EditingList:
-                await myListsHandler.ActionInterrupted(message);
+                await myListsHandlerHandler.ActionInterrupted(message);
                 return;
             case State.EditingListParticipants:
-                await myListsHandler.EditListParticipants(message);
+                await myListsHandlerHandler.EditListParticipants(message);
                 return;
             case State.EditingListName:
-                await myListsHandler.EditListName(message);
+                await myListsHandlerHandler.EditListName(message);
                 return;
             case State.EditingEvent:
                 // TODO: show event edit message with keyboard
@@ -157,7 +157,7 @@ public class HandleUpdateService
         }
         if (myPeopleMatches.Contains(text.ToLower()))
         {
-            await myListsHandler.HandleMyPeopleCommand(message);
+            await myListsHandlerHandler.HandleMyPeopleCommand(message);
             return;
         }
         
@@ -178,7 +178,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleNextPageAction(callbackQuery);
                 break;
             case "changePagePeople":
-                await myListsHandler.HandleNextPageAction(callbackQuery);
+                await myListsHandlerHandler.HandleNextPageAction(callbackQuery);
                 break;
             case "showEvent":
                 await myEventsHandler.HandleViewEventAction(callbackQuery);
@@ -187,13 +187,13 @@ public class HandleUpdateService
                 await mainHandler.HandleEditAction(callbackQuery);
                 break;
             case "showPersonList":
-                await myListsHandler.HandleViewPersonListAction(callbackQuery);
+                await myListsHandlerHandler.HandleViewPersonListAction(callbackQuery);
                 break;
             case "editPersonList":
-                await myListsHandler.HandleEditPersonListAction(callbackQuery);
+                await myListsHandlerHandler.HandleEditPersonListAction(callbackQuery);
                 break;
             case "createPersonList":
-                await myListsHandler.HandleCreatePersonListAction(callbackQuery);
+                await myListsHandlerHandler.HandleCreatePersonListAction(callbackQuery);
                 break;
             case "createEvent":
                 await myEventsHandler.HandleCreateEventAction(callbackQuery);
@@ -202,7 +202,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleBackAction(callbackQuery);
                 break;
             case "backMyPeople":
-                await myListsHandler.HandleBackAction(callbackQuery); 
+                await myListsHandlerHandler.HandleBackAction(callbackQuery);
                 break;
             case "editEvent":
                 await myEventsHandler.HandleEditEventAction(callbackQuery);
@@ -217,7 +217,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleAddToCalendarAction(callbackQuery);
                 break;
             case "savePersonList":
-                await myListsHandler.HandleSavePersonList(callbackQuery);
+                await myListsHandlerHandler.HandleSavePersonList(callbackQuery);
                 break;
             default:
                 await messageView.AnswerCallbackQuery(callbackQuery.Id, null);

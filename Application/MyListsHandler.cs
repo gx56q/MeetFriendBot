@@ -1,15 +1,14 @@
-using System.Text;
 using Domain;
+using System.Text;
 using Infrastructure.S3Storage;
-using Infrastructure.YDB;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Application;
 
-public class MyListsHandler
+public class MyListsHandlerTelegram
 {
-    private static List<PersonList> RetrievePeople(long userId)
+    public static List<PersonList> RetrievePeople(long userId)
     {
         return new List<PersonList>()
         {
@@ -22,26 +21,22 @@ public class MyListsHandler
             PersonList.FromJson(@"{""id"":""7"",""name"":""Семья3"",""participants"":[""gx56q"",""dudefromtheInternet"",""yellooot"", ""xoposhiy""]}")
         };
     }
-    
-    
+
     private readonly IMessageView messageView;
     private readonly IBucket bucket;
-    private readonly IBotDatabase botDatabase;
     private readonly IMainHandler mainHandler;
 
-    public MyListsHandler(
+    public MyListsHandlerTelegram(
         IMessageView messageView,
         IBucket bucket,
-        IBotDatabase botDatabase,
         IMainHandler mainHandler)
     {
         this.messageView = messageView;
         this.bucket = bucket;
-        this.botDatabase = botDatabase;
         this.mainHandler = mainHandler;
     }
-        
-        
+
+
     public async Task EditListParticipants(Message message)
     {
         var text = message.Text;
@@ -69,7 +64,7 @@ public class MyListsHandler
         await bucket.WriteUserState(userId, State.EditingList);
         await messageView.SayWithKeyboard("Название изменено!", fromChatId, mainHandler.GetMainKeyboard());
     }
-    
+
     public async Task ActionInterrupted(Message message)
     {
         var fromChatId = message.Chat.Id;
@@ -83,12 +78,12 @@ public class MyListsHandler
         await bucket.WriteUserState(userId, State.EditingList);
         await messageView.SayWithKeyboard("Ввод отменен", fromChatId, mainHandler.GetMainKeyboard());
     }
-    
+
     public async Task HandleMyPeopleCommand(Message message)
     {
         var fromChatId = message.Chat.Id;
         var userId = message.From!.Id;
-        
+
         var peopleLists = RetrievePeople(userId);
         if (peopleLists.Any())
         {
@@ -100,8 +95,8 @@ public class MyListsHandler
             await messageView.SayWithKeyboard("У вас нет людей", fromChatId, mainHandler.GetMainKeyboard());
         }
     }
-    
-    private static InlineKeyboardMarkup GetPeopleInlineKeyboard(IReadOnlyList<PersonList> people, 
+
+    private static InlineKeyboardMarkup GetPeopleInlineKeyboard(IReadOnlyList<PersonList> people,
         int currentPage = 1, int peoplePerPage = 6)
     {
         const int columnCount = 2; // Number of columns for buttons
@@ -142,9 +137,9 @@ public class MyListsHandler
 
             inlineKeyboard.Add(new List<InlineKeyboardButton> { nextButton });
         }
-        
-        inlineKeyboard.Add(new List<InlineKeyboardButton> 
-        { new("Новый список") 
+
+        inlineKeyboard.Add(new List<InlineKeyboardButton>
+        { new("Новый список")
             { CallbackData = $"createPersonList" } });
         return new InlineKeyboardMarkup(inlineKeyboard);
     }
@@ -162,7 +157,7 @@ public class MyListsHandler
         await messageView.EditInlineKeyboard("Ваши люди:", chatId, messageId, peopleKeyboard);
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
-    
+
     public async Task HandleViewPersonListAction(CallbackQuery callbackQuery)
     {
         var userId = callbackQuery.From.Id;
@@ -170,7 +165,7 @@ public class MyListsHandler
         var messageId = callbackQuery.Message.MessageId;
         var data = callbackQuery.Data!.Split('_');
         var listId = data[1];
-        
+
         await bucket.WriteUserState(userId, State.Start);
         var personLists = RetrievePeople(userId);
         var myPersonList = personLists.FirstOrDefault(p => p.Id == listId);
@@ -183,7 +178,7 @@ public class MyListsHandler
         }
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
-    
+
     private static string GetPersonListMessageText(PersonList myPersonList)
     {
         var messageText = new StringBuilder();
@@ -193,7 +188,7 @@ public class MyListsHandler
             messageText.AppendLine($"<a href=\"@{participant}\"> @{participant}</a>");
         return messageText.ToString();
     }
-    
+
     private static InlineKeyboardMarkup GetPersonListInlineKeyboard(PersonList myPersonList)
     {
         var inlineKeyboard = new List<List<InlineKeyboardButton>>();
@@ -219,7 +214,7 @@ public class MyListsHandler
         var messageId = callbackQuery.Message.MessageId;
         var data = callbackQuery.Data!.Split('_');
         var personListId = data[1];
-        
+
         var personLists = RetrievePeople(userId);
         var myPersonList = personLists.FirstOrDefault(pl => pl.Id == personListId);
 
@@ -233,17 +228,17 @@ public class MyListsHandler
         }
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
-    
+
     private static InlineKeyboardMarkup GetEditPersonListInlineKeyboard(PersonList myPersonList)
     {
         var inlineKeyboard = new List<List<InlineKeyboardButton>>();
-        
+
         // TODO: обработка
         var editNameButton = new InlineKeyboardButton("Изменить имя")
         {
             CallbackData = $"edit_ListName_{myPersonList.Id}"
         };
-        
+
         // TODO: обработка
         var editParticipantsButton = new InlineKeyboardButton("Изменить участников")
         {
@@ -254,7 +249,7 @@ public class MyListsHandler
         {
             CallbackData = $"showPersonList_{myPersonList.Id}"
         };
-        
+
         var saveButton = new InlineKeyboardButton("Сохранить")
         {
             CallbackData = $"savePersonList_{myPersonList.Id}"
