@@ -75,7 +75,7 @@ public class S3Bucket : IBucket
         }
     }
     
-    public async Task WriteEventDraft(long userId, Domain.Event draft)
+    public async Task WriteDraft<T>(long userId, T draft)
     {
         var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
         var response = await objectService.PutAsync(
@@ -92,13 +92,13 @@ public class S3Bucket : IBucket
         }
     }
     
-    public async Task<Event> GetEventDraft(long userId)
+    public async Task<PersonList> GetPersonListDraft(long userId)
     {
         var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
         var response = await objectService.GetAsync(filename);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return new Domain.Event(userId);
+            return new PersonList(userId);
         }
         if (!response.IsSuccessStatusCode)
         {
@@ -110,10 +110,31 @@ public class S3Bucket : IBucket
         }
         var body = await response.ReadAsByteArrayAsync();
         var content = System.Text.Encoding.UTF8.GetString(body.Value);
-        return JsonConvert.DeserializeObject<Domain.Event>(content)!;
+        return JsonConvert.DeserializeObject<PersonList>(content)!;
     }
     
-    public async Task ClearEventDraft(long userId)
+    public async Task<Event> GetEventDraft(long userId)
+    {
+        var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
+        var response = await objectService.GetAsync(filename);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new Event(userId);
+        }
+        if (!response.IsSuccessStatusCode)
+        {
+            throw S3ApiException.FromResult(
+                response.ToResult(),
+                HttpMethod.Get,
+                filename
+            );
+        }
+        var body = await response.ReadAsByteArrayAsync();
+        var content = System.Text.Encoding.UTF8.GetString(body.Value);
+        return JsonConvert.DeserializeObject<Event>(content)!;
+    }
+    
+    public async Task ClearDraft(long userId)
     {
         var filename = GetFilename(DraftFolder+"/"+userId+"_draft");
         var response = await objectService.DeleteAsync(filename);

@@ -21,7 +21,7 @@ public class EventRepo
     public static async Task<EventRepo> InitWithDatabase(IBotDatabase botDatabase)
     {
         var model = new EventRepo(botDatabase);
-        await model.CreateTables();
+        // await model.CreateTables();
         return model;
     }
     
@@ -32,8 +32,6 @@ public class EventRepo
         var firstName = YdbValue.MakeOptionalUtf8(user.FirstName);
         var lastName = YdbValue.MakeOptionalUtf8(user.LastName);
         var username = YdbValue.MakeOptionalUtf8(user.Username);
-        var events = YdbValue.MakeOptionalJson(JsonConvert.SerializeObject(user.Events));
-        var personLists = YdbValue.MakeOptionalJson(JsonConvert.SerializeObject(user.PersonLists));
         
         await botDatabase.ExecuteModify($@"
             DECLARE $id AS Int64;
@@ -41,11 +39,9 @@ public class EventRepo
             DECLARE $first_name AS Utf8?;
             DECLARE $last_name AS Utf8?;
             DECLARE $username AS Utf8?;
-            DECLARE $events AS Json?;
-            DECLARE $person_lists AS Json?;
 
-            UPSERT INTO {UsersTableName} ( id, telegram_id, first_name, last_name, username, events, person_lists )
-            VALUES ( $id, $telegram_id, $first_name, $last_name, $username, $events, $person_lists )
+            UPSERT INTO {UsersTableName} ( id, telegram_id, first_name, last_name, username )
+            VALUES ( $id, $telegram_id, $first_name, $last_name, $username )
 
         ", new Dictionary<string, YdbValue>
         {
@@ -53,9 +49,7 @@ public class EventRepo
             { "$telegram_id", telegramId },
             { "$first_name", firstName },
             { "$last_name", lastName },
-            { "$username", username },
-            { "$events", events },
-            { "$person_lists", personLists }
+            { "$username", username }
         });
     }
 
@@ -137,6 +131,11 @@ public class EventRepo
         var simplePersonList = new SimplePersonList(userEvent.Id, userEvent.Name);
         var userPersonLists = await GetPersonListsByUserId(userEvent.CreatorId);
         var userPersonListsList = userPersonLists.ToList();
+        var sameEvent = userPersonListsList.FirstOrDefault(e => e.Id == userEvent.Id);
+        if (sameEvent != null)
+        {
+            userPersonListsList.Remove(sameEvent);
+        }
         userPersonListsList.Add(simplePersonList);
         await PushUserPersonLists(userEvent.CreatorId, userPersonListsList);
     }
@@ -160,6 +159,57 @@ public class EventRepo
         });
     }
 
+    public async Task<List<User>> GetUsersFromPersonList(string name, long userId)
+    {
+        var personList = await GetPersonListByName(name, userId);
+        if (personList is null)
+        {
+            return new List<User>();
+        }
+
+        var participants = personList.Participants;
+        if (participants is null)
+        {
+            return new List<User>();
+        }
+
+        return participants.Select(participant =>
+            new User { Id = participant.Id, FirstName = participant.ParticipantFirstName, 
+                Username = participant.ParticipantUsername, TelegramId = participant.Id }).ToList();
+    }
+
+    private async Task<PersonList?> GetPersonListByName(string listName, long userId)
+    {
+        var rows = await botDatabase.ExecuteFind($@"
+            DECLARE $name AS Utf8;
+            DECLARE $user_id AS Int64;
+
+            SELECT id, name, participants, creator
+            FROM {PersonListsTableName}
+            WHERE name = $name AND creator = $user_id
+        ", new Dictionary<string, YdbValue>
+        {
+            {"$name", YdbValue.MakeUtf8(listName)},
+            {"$user_id", YdbValue.MakeInt64(userId)}
+        });
+
+        if (rows is null || !rows.Any())
+        {
+            return null;
+        }
+        
+        var row = rows.First();
+        
+        var id = row["id"].GetUtf8();
+        var name = row["name"].GetOptionalUtf8();
+        var participantsJson = row["participants"].GetOptionalJson();
+        var participants = participantsJson is null ?
+            new List<PersonListParticipant>() :
+            JsonConvert.DeserializeObject<List<PersonListParticipant>>(participantsJson);
+        var creator = row["creator"].GetInt64();
+        return new PersonList(id, name, participants, creator, EventStatus.Active);
+    }
+
     
     public async Task PushEvent(Event userEvent)
     {
@@ -167,7 +217,7 @@ public class EventRepo
         var name = YdbValue.MakeOptionalUtf8(userEvent.Name);
         var description = YdbValue.MakeOptionalUtf8(userEvent.Description);
         var date = YdbValue.MakeOptionalDatetime(userEvent.Date);
-        var location = YdbValue.MakeOptionalUtf8(userEvent.Location);
+        var location = YdbValue.MakeOptionalJson(JsonConvert.SerializeObject(userEvent.Location));
         var picture = YdbValue.MakeOptionalUtf8(userEvent.Picture);
         var participants = YdbValue.MakeOptionalJson(JsonConvert.SerializeObject(userEvent.Participants));
         var creator = YdbValue.MakeInt64(userEvent.CreatorId);
@@ -177,7 +227,7 @@ public class EventRepo
             DECLARE $name AS Utf8?;
             DECLARE $description AS Utf8?;
             DECLARE $date AS Datetime?;
-            DECLARE $location AS Utf8?;
+            DECLARE $location AS Json?;
             DECLARE $picture AS Utf8?;
             DECLARE $participants AS Json?;
             DECLARE $creator AS Int64;
@@ -263,8 +313,8 @@ public class EventRepo
         var name = row["name"].GetOptionalUtf8();
         var participantsJson = row["participants"].GetOptionalJson();
         var participants = participantsJson is null ?
-            new List<long>() :
-            JsonConvert.DeserializeObject<List<long>>(participantsJson);
+            new List<PersonListParticipant>() :
+            JsonConvert.DeserializeObject<List<PersonListParticipant>>(participantsJson);
         var creator = row["creator"].GetInt64();
         return new PersonList(id, name, participants, creator, EventStatus.Active);
     }
@@ -293,7 +343,10 @@ public class EventRepo
         var id = row["id"].GetUtf8();
         var name = row["name"].GetOptionalUtf8();
         var description = row["description"].GetOptionalUtf8();
-        var location = row["location"].GetOptionalUtf8();
+        var locationJson = row["location"].GetOptionalJson();
+        var location = locationJson is null ?
+            new Location("") :
+            JsonConvert.DeserializeObject<Location>(locationJson);
         var picture = row["picture"].GetOptionalUtf8();
         var datetime = row["date"].GetOptionalDatetime();
         var creator = row["creator"].GetInt64();
@@ -374,7 +427,7 @@ public class EventRepo
                 name Utf8,
                 description Utf8,
                 date Datetime,
-                location Utf8,
+                location Json,
                 picture Utf8,
                 participants Json,
                 creator Int64 NOT NULL,

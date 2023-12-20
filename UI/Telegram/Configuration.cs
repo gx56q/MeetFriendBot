@@ -13,6 +13,8 @@ public class Configuration : IBucketConfiguration, IYdbConfiguration
     public string YdbPath => appSettings[nameof(YdbPath)]!;
     public long DevopsChatId => long.Parse(appSettings[nameof(DevopsChatId)]!);
     public string? IamTokenPath => appSettings[nameof(IamTokenPath)];
+    public string YandexGeocodeApiKey => appSettings[nameof(YandexGeocodeApiKey)]!;
+    public string YandexAppmetricaTrackingId => appSettings[nameof(YandexAppmetricaTrackingId)]!;
 
     private readonly IConfigurationSection appSettings;
 

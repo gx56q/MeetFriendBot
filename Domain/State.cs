@@ -4,6 +4,7 @@ public enum State
 {
     Start,
     CreatingEvent,
+    CreatingList,
     EditingEvent,
     EditingName,
     EditingDescription,

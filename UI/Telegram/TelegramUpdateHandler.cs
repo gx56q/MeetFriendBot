@@ -1,4 +1,7 @@
 ﻿using Grpc.Core.Logging;
+using Infrastructure.Api.Geocode;
+using Infrastructure.Api.Maps;
+using Infrastructure.Api.Taxi;
 using Infrastructure.S3Storage;
 using Infrastructure.YDB;
 using Newtonsoft.Json;
@@ -44,6 +47,9 @@ public class TelegramUpdateHandler : YcFunction<string, Response>
             var view = new HtmlMessageView(tgClient, configuration.DevopsChatId);
             var bucketRepo = new S3Bucket(configuration.CreateBotBucketService());
             var botDatabase = new BotDatabase(configuration);
+            var geocode = new GeocodeApiYandex(configuration.YandexGeocodeApiKey);
+            var taxi = new TaxiApiYandex(configuration.YandexAppmetricaTrackingId);
+            var maps = new MapsApiYandex();
 
             var commands = new IChatCommandHandler[]
             {
@@ -52,7 +58,7 @@ public class TelegramUpdateHandler : YcFunction<string, Response>
                 new LudkaCommandHandler(view)
             };
 
-            var updateService = new HandleUpdateService(view, commands, bucketRepo, botDatabase);
+            var updateService = new HandleUpdateService(view, commands, bucketRepo, botDatabase, geocode, taxi, maps);
             updateService.Handle(update).Wait();
             if (GetSender(update) != configuration.DevopsChatId)
                 // tgClient.SendTextMessageAsync(settings.DevopsChatId, presenter.FormatIncomingUpdate(update), null, parseMode: ParseMode.Html);

@@ -87,11 +87,12 @@ public class MainHandler : IMainHandler
                        chatId, key);
                    break;
                case "location":
-                   await messageView.SayWithKeyboard("Отправьте место или нажмите кнопку назад для отмены",
+                   await messageView.SayWithKeyboard("Отправьте место (поставьте '!' в начале, чтобы мы не искали это место на карте) или нажмите кнопку назад для отмены",
                        chatId, key);
                    break;
                case "date":
-                   await messageView.SayWithKeyboard("Отправьте дату или нажмите кнопку назад для отмены",
+                   await messageView.SayWithKeyboard("Отправьте дату в формате  dd.MM.yyyy HH:mm:ss, dd.MM.yyyy, dd.MM.yyyy HH:mm" + 
+                                                     " или нажмите кнопку назад для отмены",
                        chatId, key);
                    break;
                case "picture":

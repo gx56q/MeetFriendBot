@@ -10,7 +10,7 @@ namespace Domain
             string id,
             string? name,
             string? description,
-            string? location,
+            Location? location,
             DateTime? date,
             string? picture,
             List<EventParticipant>? participants,
@@ -30,7 +30,7 @@ namespace Domain
         }
         public string? Name { get; set; }
         public string? Description { get; set; }
-        public string? Location { get; set; }
+        public Location? Location { get; set; }
         public DateTime? Date { get; set; }
         public string? Picture { get; set; }
         public List<EventParticipant>? Participants { get; set; }
@@ -51,7 +51,7 @@ namespace Domain
         {
         }
 
-        public Event(string id, string name, string? description, string location,
+        public Event(string id, string name, string? description, Location location,
             DateTime? date, string? picture, List<EventParticipant>? participants, EventStatus status, long creator) : base(id)
         {
             Name = name;
@@ -70,7 +70,7 @@ namespace Domain
             var id = jObject["id"].ToString();
             var name = jObject["name"]?.ToString();
             var description = jObject["description"]?.ToString();
-            var location = jObject["location"]?.ToObject<string>();
+            var location = jObject["location"]?.ToObject<Location>();
             var date = jObject["date"]?.ToObject<DateTime>();
             var picture = jObject["picture"]?.ToObject<string>();
             var participants = jObject["participants"]?.ToObject<List<EventParticipant>>() ?? new List<EventParticipant>();

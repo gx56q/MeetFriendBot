@@ -24,8 +24,8 @@ public class Matches
         "новая",
         "создать"
     };
-    
-    private readonly HashSet<string> myPeopleMatches = new()
+
+    public static readonly HashSet<string> myPeopleMatches = new()
     {
         "мои люди",
         "люди"

@@ -1,63 +1,44 @@
 using System.Text;
 using Domain;
-using Ical.Net;
-using Ical.Net.CalendarComponents;
-using Ical.Net.DataTypes;
-using Ical.Net.Serialization;
+using Infrastructure.Api.Geocode;
+using Infrastructure.Api.Maps;
+using Infrastructure.Api.Taxi;
+using Infrastructure.Calendar;
 using Infrastructure.S3Storage;
 using Infrastructure.YDB;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using EventStatus = Domain.EventStatus;
+using Location = Domain.Location;
+using User = Domain.User;
 
 namespace UI.Telegram.AppLogic;
 
 public class MyEventsHandler
 {
-    private static string GetTaxiLink(string location)
-    {
-        return
-            "https://3.redirect.appmetrica.yandex.com/route?&end-lat=56.841129&end-lon=60.614752&tariffClass=comfortplus&ref=mywebsiteru&appmetrica_tracking_id=1178268795219780156&lang=ru\n";
-        
-    }
-
-    private static string GetMapLink(string location)
-    {
-        return "https://yandex.ru/maps/?rtext=~56.841129%2C60.614752&rtt=mt";
-    }
-
-    private static byte[] GetEventCalendar(Event data)
-    {
-        var calendar = new Calendar();
-
-        var calendarEvent = new CalendarEvent
-        {
-            Summary = data.Name,
-            Description = data.Description,
-            Location = data.Location ?? "",
-            DtStart = new CalDateTime(Convert.ToDateTime(data.Date), "UTC")
-        };
-        
-        calendar.Events.Add(calendarEvent);
-        var serializer = new CalendarSerializer();
-        var calendarString = serializer.SerializeToString(calendar);
-        return Encoding.UTF8.GetBytes(calendarString);
-    }
-
     private readonly IMessageView messageView;
     private readonly IBucket bucket;
     private readonly EventRepo eventRepo;
     private readonly IMainHandler mainHandler;
+    private readonly IGeocodeApi geocodeApi;
+    private readonly ITaxiApi taxiApi;
+    private readonly IMapsApi mapsApi;
 
     public MyEventsHandler(
         IMessageView messageView,
         IBucket bucket,
         EventRepo eventRepo,
+        IGeocodeApi geocodeApi,
+        ITaxiApi taxiApi,
+        IMapsApi mapsApi,
         IMainHandler mainHandler)
     {
         this.messageView = messageView;
         this.bucket = bucket;
+        this.geocodeApi = geocodeApi;
         this.eventRepo = eventRepo;
+        this.taxiApi = taxiApi;
+        this.mapsApi = mapsApi;
         this.mainHandler = mainHandler;
     }
     
@@ -86,7 +67,7 @@ public class MyEventsHandler
         var fileId = message.Photo!.Last().FileId;
         await bucket.WriteEventPicture(draft.Id, fileId);
         draft.Picture = fileId;
-        await bucket.WriteEventDraft(message.From.Id, draft);
+        await bucket.WriteDraft(message.From.Id, draft);
         await bucket.WriteUserState(message.From.Id,
             draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото изменено!", fromChatId,
@@ -118,7 +99,7 @@ public class MyEventsHandler
             var message = await messageView.SayWithInlineKeyboardAndPhoto(messageText,
                 chatId, keyboard, pictureId);
             draft.InlinedMessageId = message.MessageId;
-            await bucket.WriteEventDraft(userId, draft);
+            await bucket.WriteDraft(userId, draft);
         }
         else if (draft.Picture is not null)
         {
@@ -131,7 +112,8 @@ public class MyEventsHandler
         }
     }
 
-    private string GetEventMessageText(Event newEvent, Dictionary<string, string> fields)
+    // ReSharper disable once CognitiveComplexity
+    private static string GetEventMessageText(Event newEvent, Dictionary<string, string> fields)
     {
         var messageText = new StringBuilder();
         foreach (var field in fields)
@@ -140,8 +122,11 @@ public class MyEventsHandler
             var propertyValue = GetPropertyValue(newEvent, field.Key);
             switch (propertyValue)
             {
+                case Location location:
+                    propertyValue = location.Loc;
+                    break;
                 case DateTime dateTime:
-                    propertyValue = dateTime.ToString("yyyy-MM-dd HH:mm:ss");
+                    propertyValue = dateTime.ToString("dd-MM-yyyy HH:mm");
                     break;
                 case List<EventParticipant> participants:
                     propertyValue = participants.Count.ToString();
@@ -293,7 +278,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(userId);
         await bucket.DeleteEventPicture(draft.Id);
         draft.Picture = null;
-        await bucket.WriteEventDraft(userId, draft);
+        await bucket.WriteDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Фото удалено!", chatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, chatId, true);
@@ -304,31 +289,45 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
-        
         if (text == "Назад")
         {
             await CancelAction(message);
             return;
         }
-
+        
+        List<User> participants;
         var draft = await bucket.GetEventDraft(userId);
-        var participantsRaw = text.Split(new[] { ',', ' ', '\n' },
-            StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => p.Trim().Replace("@", "")).ToList();
-        var participants = await eventRepo.FilterValidUsersByUsernames(participantsRaw);
-        var inactiveUsers = participantsRaw.Except(participants.Select(p => p.Username)).ToList();
-        if (inactiveUsers.Any())
+        if (text != null && text.Trim().StartsWith('!'))
         {
-            await messageView.Say($"Пользователи: {string.Join("\n", inactiveUsers)}\n не найдены\n" +
-                                  $"Отправьте им этого бота, чтобы добавить их в список участников", fromChatId);
+            var personListName = text.Trim()[1..];
+            participants = await eventRepo.GetUsersFromPersonList(personListName, userId);
+            if (participants.Count == 0)
+            {
+                await messageView.Say($"Список {personListName} не найден", fromChatId);
+                return;
+            }
         }
-        if (!participants.Any())
+        else
         {
-            return;
+            var participantsRaw = text!.Split(new[] { ',', ' ', '\n' },
+                StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim().Replace("@", "")).ToList();
+            participants = await eventRepo.FilterValidUsersByUsernames(participantsRaw);
+            var inactiveUsers = participantsRaw.Except(participants.Select(p => p.Username)).ToList();
+            if (inactiveUsers.Any())
+            {
+                await messageView.Say($"Пользователи: {string.Join(", @", inactiveUsers)} не найдены\n" +
+                                      $"Отправьте им этого бота, чтобы добавить их в список участников", fromChatId);
+            }
+
+            if (!participants.Any())
+            {
+                return;
+            }
         }
         draft.Participants = participants.Select(p => new EventParticipant(p.Id, UserStatus.Maybe, p.Username ?? "", 
             p.FirstName?? "")).ToList();
-        await bucket.WriteEventDraft(userId, draft);
+        await bucket.WriteDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Участники изменены!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
@@ -346,9 +345,16 @@ public class MyEventsHandler
         }
 
         var draft = await bucket.GetEventDraft(userId);
-        // TODO: date verification
-        draft.Date = DateTime.Parse(text);
-        await bucket.WriteEventDraft(userId, draft);
+        // TODO: make smart check, because this only accepts dd.MM.yyyy
+        string[] dateFormats = { "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy", "dd.MM.yyyy HH:mm" };
+        var isValidDate = DateTime.TryParseExact(text, dateFormats, null, System.Globalization.DateTimeStyles.None, out var date);
+        if (!isValidDate)
+        {
+            await messageView.Say("Неверный формат даты", fromChatId);
+            return;
+        }
+        draft.Date = date;
+        await bucket.WriteDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Дата изменена!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
@@ -359,16 +365,17 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
-        if (text == "Назад")
+        if (text is "Назад" or null)
         {
             await CancelAction(message);
             return;
         }
-
         var draft = await bucket.GetEventDraft(userId);
-        // TODO logic
-        draft.Location = text;
-        await bucket.WriteEventDraft(userId, draft);
+        var cleanText = text.Trim();
+        var location = cleanText.StartsWith('!') ? new Location(text[1..].Trim()) :
+            geocodeApi.ResolveLocation(cleanText);
+        draft.Location = location;
+        await bucket.WriteDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Место изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
@@ -387,7 +394,7 @@ public class MyEventsHandler
 
         var draft = await bucket.GetEventDraft(userId);
         draft.Description = text;
-        await bucket.WriteEventDraft(userId, draft);
+        await bucket.WriteDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Описание изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
@@ -403,10 +410,9 @@ public class MyEventsHandler
             await CancelAction(message);
             return;
         }
-
         var draft = await bucket.GetEventDraft(userId);
         draft.Name = text;
-        await bucket.WriteEventDraft(userId, draft);
+        await bucket.WriteDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Название изменено!", fromChatId, mainHandler.GetMainKeyboard());
         await UpdateEventMessage(draft, userId, fromChatId);
@@ -416,7 +422,7 @@ public class MyEventsHandler
     {
         var fromChatId = message.Chat.Id;
         var userId = message.From!.Id;
-        var myEvents = await eventRepo.GetEventsByUserId(userId);
+        var myEvents = (await eventRepo.GetEventsByUserId(userId)).ToList();
         if (myEvents.Any())
         {
             var inlineKeyboard = GetEventsInlineKeyboard(myEvents);
@@ -462,7 +468,7 @@ public class MyEventsHandler
         }
 
         draft.InlinedMessageId = replyMessage.MessageId;
-        await bucket.WriteEventDraft(userId, draft);
+        await bucket.WriteDraft(userId, draft);
     }
 
     private static InlineKeyboardMarkup GetEventsInlineKeyboard(IEnumerable<ISimple> myEvents,
@@ -626,17 +632,19 @@ public class MyEventsHandler
             }
         }
         inlineKeyboard.Add(firstRow);
-        // TODO: show only if in coordinates
-        var showOnMapButton = new InlineKeyboardButton("\ud83d\uddfa Карта")
+        if (myEvent.Location is not null && myEvent.Location.HasCoordinates)
         {
-            Url = GetMapLink(myEvent.Location!)
-        };
-        var orderTaxiButton = new InlineKeyboardButton("\ud83d\ude95 Такси")
-        {
-            Url = GetTaxiLink(myEvent.Location!)
-        };
-        inlineKeyboard.Add(new List<InlineKeyboardButton> { showOnMapButton, orderTaxiButton });
-            
+            var showOnMapButton = new InlineKeyboardButton("\ud83d\uddfa Карта")
+            {
+                Url = mapsApi.GetMapLink(myEvent.Location)
+            };
+            var orderTaxiButton = new InlineKeyboardButton("\ud83d\ude95 Такси")
+            {
+                Url = taxiApi.GetTaxiLink(myEvent.Location)
+            };
+            inlineKeyboard.Add(new List<InlineKeyboardButton> { showOnMapButton, orderTaxiButton });
+        }
+        
         if (myEvent.CreatorId == userId)
         {
             var editButton = new InlineKeyboardButton("Редактировать встречу")
@@ -656,16 +664,19 @@ public class MyEventsHandler
     
     public async Task HandleAddToCalendarAction(CallbackQuery callbackQuery)
     {
-        var userId = callbackQuery.From.Id;
         var chatId = callbackQuery.Message!.Chat.Id;
         var eventId = callbackQuery.Data!.Split('_')[1];
         var myEvent = await eventRepo.GetEventById(eventId);
         if (myEvent != null)
         {
-            var calendar = GetEventCalendar(myEvent);
-            // TODO: add note how to add to calendar
-            await messageView.SendFile(chatId, calendar, "your_event.ics", 
-                "TODO: тут может будет справочка как добавить из файла к себе в календарь");
+            var calendar = CalendarGenerator.GenerateEventCalendar(myEvent);
+            const string helpText = "Чтобы добавить это событие в свой календарь, выполните следующие шаги:\n" +
+                                    "1. Скачайте файл your_event.ics, нажав на кнопку ниже.\n" +
+                                    "2. Откройте свой календарь (например, Google Календарь).\n" +
+                                    "3. Импортируйте событие, выбрав опцию 'Импорт' или 'Добавить'.\n" +
+                                    "4. Выберите скачанный файл your_event.ics.\n" +
+                                    "5. Подтвердите импорт, и событие будет добавлено в ваш календарь.";
+            await messageView.SendFile(chatId, calendar, "your_event.ics", helpText);
         }
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
@@ -677,7 +688,7 @@ public class MyEventsHandler
         var callbackQueryId = callbackQuery.Id;
         var draft = await bucket.GetEventDraft(userId);
         await eventRepo.PushEvent(draft);
-        await bucket.ClearEventDraft(userId);
+        await bucket.ClearDraft(userId);
         await bucket.WriteUserState(userId, State.Start);
         callbackQuery.Data = $"showEvent_{eventId}";
         await HandleViewEventAction(callbackQuery);
@@ -693,7 +704,7 @@ public class MyEventsHandler
         
         var draft = await bucket.GetEventDraft(userId);
         var eventId = draft.Id;
-        await bucket.ClearEventDraft(userId);
+        await bucket.ClearDraft(userId);
         await bucket.DeleteEventPicture(eventId);
         await bucket.WriteUserState(userId, State.Start);
         await messageView.DeleteMessage(chatId, messageId);
@@ -720,13 +731,13 @@ public class MyEventsHandler
             await messageView.Say("Нужно заполнить дату", chatId);
             return;
         }
-        if (draft.Location == null)
+        if (draft.Location?.Loc is null)
         {
             await messageView.Say("Нужно заполнить место", chatId);
             return;
         }
         await eventRepo.PushEvent(draft);
-        await bucket.ClearEventDraft(userId);
+        await bucket.ClearDraft(userId);
         await bucket.WriteUserState(userId, State.Start);
         await messageView.DeleteMessage(chatId, messageId);
         await messageView.SayWithKeyboard($"Встреча {draft.Name} создана!", chatId, mainHandler.GetMainKeyboard());
@@ -765,7 +776,7 @@ public class MyEventsHandler
         {
             await bucket.WriteUserState(userId, State.EditingEvent);
             existingEvent.InlinedMessageId = messageId;
-            await bucket.WriteEventDraft(userId, existingEvent);
+            await bucket.WriteDraft(userId, existingEvent);
             var fields = existingEvent.GetFields();
             var messageText = "Редактирование события\n\n" + GetEventMessageText(existingEvent, fields);
             var inlineKeyboard = GetEditEventInlineKeyboard(existingEvent, fields);

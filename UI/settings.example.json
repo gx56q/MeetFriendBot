@@ -3,7 +3,9 @@
     "TelegramToken": "TELEGRAM_TOKEN",
     "YdbEndpoint": "protocol://domain:port",
     "YdbPath": "/zone/blablabla/id",
-    "DevopsChatId": "chat_id"
+    "DevopsChatId": "chat_id",
+    "YandexGeocodeApiKey": "key-key-key",
+    "YandexAppmetricaTrackingId": "keeeeeeeeey"
   },
   "CloudStorageOptions": {
     "Bucket": "object-storage-bucket-name",

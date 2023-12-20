@@ -1,5 +1,8 @@
 using System.Text.RegularExpressions;
 using Domain;
+using Infrastructure.Api.Geocode;
+using Infrastructure.Api.Maps;
+using Infrastructure.Api.Taxi;
 using Infrastructure.S3Storage;
 using Infrastructure.YDB;
 using Telegram.Bot.Exceptions;
@@ -19,14 +22,17 @@ public class HandleUpdateService
     private readonly EventRepo eventRepo;
 
     private readonly MyEventsHandler myEventsHandler;
-    private readonly MyListsHandler myListsHandlerHandler;
+    private readonly MyListsHandler myListsHandler;
     private readonly IMainHandler mainHandler;
     
     public HandleUpdateService(
         IMessageView messageView, 
         IChatCommandHandler[] commands,
         IBucket bucket,
-        IBotDatabase botDatabase)
+        IBotDatabase botDatabase,
+        IGeocodeApi geocodeApi,
+        ITaxiApi taxi,
+        IMapsApi mapsApi)
     {
         this.messageView = messageView;
         this.commands = commands;
@@ -34,8 +40,9 @@ public class HandleUpdateService
         
         eventRepo = EventRepo.InitWithDatabase(botDatabase).Result;
         mainHandler = new MainHandler(messageView, bucket, eventRepo);
-        myEventsHandler = new MyEventsHandler(messageView, bucket, eventRepo, mainHandler);
-        myListsHandlerHandler = new MyListsHandler(messageView, bucket, eventRepo, mainHandler);
+        myEventsHandler = new MyEventsHandler(messageView, bucket, eventRepo, geocodeApi, taxi, mapsApi,
+            mainHandler);
+        myListsHandler = new MyListsHandler(messageView, bucket, eventRepo, mainHandler);
     }
 
     public async Task Handle(Update update)
@@ -123,13 +130,16 @@ public class HandleUpdateService
         switch (state)
         {
             case State.EditingList:
-                await myListsHandlerHandler.ActionInterrupted(message);
+                await myListsHandler.ActionInterrupted(message);
+                return;
+            case State.CreatingList:
+                await myListsHandler.ActionInterrupted(message);
                 return;
             case State.EditingListParticipants:
-                await myListsHandlerHandler.EditListParticipants(message);
+                await myListsHandler.EditListParticipants(message);
                 return;
             case State.EditingListName:
-                await myListsHandlerHandler.EditListName(message);
+                await myListsHandler.EditListName(message);
                 return;
             case State.EditingEvent:
                 // TODO: show event edit message with keyboard
@@ -158,19 +168,19 @@ public class HandleUpdateService
                 return;
         }
         
-        if (myEventsMatches.Contains(text.ToLower()))
+        if (Matches.myEventsMatches.Contains(text.ToLower()))
         {
             await myEventsHandler.HandleMyEvents(message);
             return;
         }
-        if (newEventMatches.Contains(text.ToLower()))
+        if (Matches.newEventMatches.Contains(text.ToLower()))
         {
             await myEventsHandler.HandleNewEvent(message);
             return;
         }
-        if (myPeopleMatches.Contains(text.ToLower()))
+        if (Matches.myPeopleMatches.Contains(text.ToLower()))
         {
-            await myListsHandlerHandler.HandleMyPeopleCommand(message);
+            await myListsHandler.HandleMyPeopleCommand(message);
             return;
         }
         
@@ -191,7 +201,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleNextPageAction(callbackQuery);
                 break;
             case "changePagePeople":
-                await myListsHandlerHandler.HandleNextPageAction(callbackQuery);
+                await myListsHandler.HandleNextPageAction(callbackQuery);
                 break;
             case "showEvent":
                 await myEventsHandler.HandleViewEventAction(callbackQuery);
@@ -200,13 +210,13 @@ public class HandleUpdateService
                 await HandleEditAction(callbackQuery);
                 break;
             case "showPersonList":
-                await myListsHandlerHandler.HandleViewPersonListAction(callbackQuery);
+                await myListsHandler.HandleViewPersonListAction(callbackQuery);
                 break;
             case "editPersonList":
-                await myListsHandlerHandler.HandleEditPersonListAction(callbackQuery);
+                await myListsHandler.HandleEditPersonListAction(callbackQuery);
                 break;
             case "createPersonList":
-                await myListsHandlerHandler.HandleCreatePersonListAction(callbackQuery);
+                await myListsHandler.HandleCreatePersonListAction(callbackQuery);
                 break;
             case "createEvent":
                 await myEventsHandler.HandleCreateEventAction(callbackQuery);
@@ -215,7 +225,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleBackAction(callbackQuery);
                 break;
             case "backMyPeople":
-                await myListsHandlerHandler.HandleBackAction(callbackQuery);
+                await myListsHandler.HandleBackAction(callbackQuery);
                 break;
             case "editEvent":
                 await myEventsHandler.HandleEditEventAction(callbackQuery);
@@ -230,7 +240,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleAddToCalendarAction(callbackQuery);
                 break;
             case "savePersonList":
-                await myListsHandlerHandler.HandleSavePersonList(callbackQuery);
+                await myListsHandler.HandleSavePersonList(callbackQuery);
                 break;
             default:
                 await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
@@ -260,6 +270,7 @@ public class HandleUpdateService
                    break;
             case "listparticipants":
                 await messageView.SayWithKeyboard("Отправьте username участников через запятую, пробел или новую строку," +
+                                                  "чтобы добавить людей из  списка, добавьте '!' вначале" +
                                                   " или нажмите кнопку назад для отмены", 
                         chatId, key);
                     break;
@@ -272,11 +283,12 @@ public class HandleUpdateService
                        chatId, key);
                    break;
                case "location":
-                   await messageView.SayWithKeyboard("Отправьте место или нажмите кнопку назад для отмены",
+                   await messageView.SayWithKeyboard("Отправьте место (поставьте '!' в начале, чтобы мы не искали это место на карте) или нажмите кнопку назад для отмены",
                        chatId, key);
                    break;
                case "date":
-                   await messageView.SayWithKeyboard("Отправьте дату или нажмите кнопку назад для отмены",
+                   await messageView.SayWithKeyboard("Отправьте дату в формате  dd.MM.yyyy HH:mm:ss, dd.MM.yyyy, dd.MM.yyyy HH:mm" + 
+                                                     " или нажмите кнопку назад для отмены",
                        chatId, key);
                    break;
                case "picture":
@@ -300,7 +312,9 @@ public class HandleUpdateService
                    break;
                case "participants":
                    await messageView.SayWithKeyboard("Отправьте username участников через запятую, пробел или новую строку," +
-                                                     " или нажмите кнопку назад для отмены", chatId, key);
+                                                     "чтобы добавить людей из  списка, добавьте '!' вначале" +
+                                                     " или нажмите кнопку назад для отмены", 
+                       chatId, key);
                    break;
                default:
                    await messageView.Say("Неизвестное поле", chatId);
@@ -308,41 +322,7 @@ public class HandleUpdateService
         }
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
-
-    private readonly HashSet<string> myEventsMatches = new()
-    {
-        "\ud83d\udcc5 мои встречи",
-        "мои встречи",
-        "встречи",
-        "мои события",
-        "список встреч",
-        "список событий",
-        "события",
-        "мои"
-    };
     
-    private readonly HashSet<string> newEventMatches = new()
-    {
-        "\ud83c\udfd7 создать встречу",
-        "создать встречу",
-        "новая встреча",
-        "новое событие",
-        "встреча",
-        "новая",
-        "создать"
-    };
-    
-    private readonly HashSet<string> myPeopleMatches = new()
-    {
-        "мои люди",
-        "люди"
-    };
-    
-    private static bool SmartContains(string value, string query)
-    {
-        return new Regex($@"\b{Regex.Escape(query)}\b", RegexOptions.IgnoreCase).IsMatch(value);
-    }
-        
     private static Task UnknownUpdateHandlerAsync() => Task.CompletedTask;
 
     private async Task HandleErrorAsync(Update incomingUpdate, Exception exception)
@@ -361,28 +341,5 @@ public class HandleUpdateService
         {
             await Console.Error.WriteLineAsync(e.ToString());
         }
-    }
-    
-    public static ReplyKeyboardMarkup GetMainKeyboard()
-    {
-        var row1 = new KeyboardButton[]
-        {
-            new("\ud83d\udcc5 Мои встречи"),
-        };
-        var row2 = new KeyboardButton[]
-        {
-            new("\ud83c\udfd7 Создать встречу"),
-            new("Мои люди")
-        };
-        var keyboard = new[]
-        {
-            row1,
-            row2
-        };
-        var replyKeyboardMarkup = new ReplyKeyboardMarkup(keyboard)
-        {
-            ResizeKeyboard = true
-        };
-        return replyKeyboardMarkup;
     }
 }
