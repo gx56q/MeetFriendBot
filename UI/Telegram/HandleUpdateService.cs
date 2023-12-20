@@ -1,19 +1,22 @@
 using System.Text.RegularExpressions;
-using Application.Commands;
 using Domain;
 using Infrastructure.S3Storage;
 using Infrastructure.YDB;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
+using UI.Telegram.AppLogic;
+using UI.Telegram.Commands;
 
-namespace Application;
+namespace UI.Telegram;
 
 public class HandleUpdateService
 {
     private readonly IMessageView messageView;
     private readonly IChatCommandHandler[] commands;
     private readonly IBucket bucket;
+    private readonly EventRepo eventRepo;
 
     private readonly MyEventsHandler myEventsHandler;
     private readonly MyListsHandler myListsHandlerHandler;
@@ -28,22 +31,17 @@ public class HandleUpdateService
         this.messageView = messageView;
         this.commands = commands;
         this.bucket = bucket;
-
-        mainHandler = new MainHandler(messageView, bucket, botDatabase);
-        myEventsHandler = new MyEventsHandler(messageView, bucket, botDatabase, mainHandler);
-        myListsHandlerHandler = new MyListsHandler(messageView, bucket, mainHandler);
+        
+        eventRepo = EventRepo.InitWithDatabase(botDatabase).Result;
+        mainHandler = new MainHandler(messageView, bucket, eventRepo);
+        myEventsHandler = new MyEventsHandler(messageView, bucket, eventRepo, mainHandler);
+        myListsHandlerHandler = new MyListsHandler(messageView, bucket, eventRepo, mainHandler);
     }
 
     public async Task Handle(Update update)
     {
         var handler = update.Type switch
         {
-            // UpdateType.Unknown:
-            // UpdateType.ChannelPost:
-            // UpdateType.EditedChannelPost:
-            // UpdateType.ShippingQuery:
-            // UpdateType.PreCheckoutQuery:
-            // UpdateType.Poll:
             UpdateType.Message => BotOnMessageReceived(update.Message!),
             UpdateType.EditedMessage => BotOnMessageReceived(update.EditedMessage!),
             UpdateType.CallbackQuery => BotOnCallbackQuery(update.CallbackQuery!),
@@ -101,7 +99,22 @@ public class HandleUpdateService
         var command = commands.FirstOrDefault(c => text.StartsWith(c.Command));
         if (command != null)
         {
-            await command.HandlePlainText(text, fromChatId, mainHandler.GetMainKeyboard());
+            if (command is StartCommandHandler)
+            {
+                var username = message.From!.Username;
+                var firstName = message.From.FirstName;
+                var lastName = message.From.LastName;
+                var user = new Domain.User
+                {
+                    Id = userId,
+                    TelegramId = userId,
+                    Username = username,
+                    FirstName = firstName,
+                    LastName = lastName
+                };
+                await eventRepo.CreateUser(user);
+            }
+            await command.HandlePlainText(message, mainHandler.GetMainKeyboard());
             return;
         }
         
@@ -120,7 +133,7 @@ public class HandleUpdateService
                 return;
             case State.EditingEvent:
                 // TODO: show event edit message with keyboard
-                await myEventsHandler.ActionInterrupted(message);
+                await myEventsHandler.ActionInterrupted(message, state);
                 return;
             case State.EditingPicture:
                 await myEventsHandler.EditPicture(message);
@@ -141,7 +154,7 @@ public class HandleUpdateService
                 await myEventsHandler.EditParticipants(message);
                 return;
             case State.CreatingEvent:
-                await myEventsHandler.ActionInterrupted(message);
+                await myEventsHandler.ActionInterrupted(message, state);
                 return;
         }
         
@@ -184,7 +197,7 @@ public class HandleUpdateService
                 await myEventsHandler.HandleViewEventAction(callbackQuery);
                 break;
             case "edit":
-                await mainHandler.HandleEditAction(callbackQuery);
+                await HandleEditAction(callbackQuery);
                 break;
             case "showPersonList":
                 await myListsHandlerHandler.HandleViewPersonListAction(callbackQuery);
@@ -223,6 +236,77 @@ public class HandleUpdateService
                 await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
                 break;
         }
+    }
+    
+        public async Task HandleEditAction(CallbackQuery callbackQuery)
+    { 
+        var userId = callbackQuery.From.Id;
+        var chatId = callbackQuery.Message!.Chat.Id;
+        var data = callbackQuery.Data;
+        var field = data!.Split("_")[1];
+        await bucket.WriteUserState(userId, Enum.Parse<State>("Editing"+field)); 
+        var key = new ReplyKeyboardMarkup(new[]
+        {
+            new KeyboardButton("Назад") 
+        })
+        { 
+            ResizeKeyboard = true 
+        };
+        switch (field.ToLower())
+        {
+            case "listname":
+                await messageView.SayWithKeyboard("Отправьте название или нажмите кнопку назад для отмены", 
+                    chatId, key);
+                   break;
+            case "listparticipants":
+                await messageView.SayWithKeyboard("Отправьте username участников через запятую, пробел или новую строку," +
+                                                  " или нажмите кнопку назад для отмены", 
+                        chatId, key);
+                    break;
+            case "name":
+                   await messageView.SayWithKeyboard("Отправьте название или нажмите кнопку назад для отмены", 
+                       chatId, key);
+                   break;
+               case "description":
+                   await messageView.SayWithKeyboard("Отправьте описание или нажмите кнопку назад для отмены",
+                       chatId, key);
+                   break;
+               case "location":
+                   await messageView.SayWithKeyboard("Отправьте место или нажмите кнопку назад для отмены",
+                       chatId, key);
+                   break;
+               case "date":
+                   await messageView.SayWithKeyboard("Отправьте дату или нажмите кнопку назад для отмены",
+                       chatId, key);
+                   break;
+               case "picture":
+                   var draft = await bucket.GetEventDraft(userId);
+                   if (draft.Picture is null)
+                   {
+                       var deletePhotoKeyboard = new ReplyKeyboardMarkup(new[]
+                       {
+                           new KeyboardButton("Удалить фото"),
+                           new KeyboardButton("Назад")
+                       })
+                       {
+                           ResizeKeyboard = true
+                       };
+                       await messageView.SayWithKeyboard("Отправьте фото или нажмите кнопку назад для отмены",
+                           chatId, deletePhotoKeyboard);
+                   }
+                   else
+                       await messageView.SayWithKeyboard("Отправьте фото или нажмите кнопку назад для отмены", 
+                           chatId, key);
+                   break;
+               case "participants":
+                   await messageView.SayWithKeyboard("Отправьте username участников через запятую, пробел или новую строку," +
+                                                     " или нажмите кнопку назад для отмены", chatId, key);
+                   break;
+               default:
+                   await messageView.Say("Неизвестное поле", chatId);
+                   break; 
+        }
+        await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
 
     private readonly HashSet<string> myEventsMatches = new()
@@ -277,5 +361,28 @@ public class HandleUpdateService
         {
             await Console.Error.WriteLineAsync(e.ToString());
         }
+    }
+    
+    public static ReplyKeyboardMarkup GetMainKeyboard()
+    {
+        var row1 = new KeyboardButton[]
+        {
+            new("\ud83d\udcc5 Мои встречи"),
+        };
+        var row2 = new KeyboardButton[]
+        {
+            new("\ud83c\udfd7 Создать встречу"),
+            new("Мои люди")
+        };
+        var keyboard = new[]
+        {
+            row1,
+            row2
+        };
+        var replyKeyboardMarkup = new ReplyKeyboardMarkup(keyboard)
+        {
+            ResizeKeyboard = true
+        };
+        return replyKeyboardMarkup;
     }
 }

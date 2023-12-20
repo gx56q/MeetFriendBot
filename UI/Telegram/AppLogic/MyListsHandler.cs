@@ -1,12 +1,13 @@
-using Domain;
 using System.Text;
+using Domain;
 using Infrastructure.S3Storage;
+using Infrastructure.YDB;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Application;
+namespace UI.Telegram.AppLogic;
 
-public class MyListsHandlerTelegram
+public class MyListsHandler
 {
     public static List<PersonList> RetrievePeople(long userId)
     {
@@ -21,18 +22,21 @@ public class MyListsHandlerTelegram
             PersonList.FromJson(@"{""id"":""7"",""name"":""Семья3"",""participants"":[""gx56q"",""dudefromtheInternet"",""yellooot"", ""xoposhiy""]}")
         };
     }
-
+    
     private readonly IMessageView messageView;
     private readonly IBucket bucket;
     private readonly IMainHandler mainHandler;
+    private readonly EventRepo eventRepo;
 
-    public MyListsHandlerTelegram(
+    public MyListsHandler(
         IMessageView messageView,
         IBucket bucket,
+        EventRepo eventRepo,
         IMainHandler mainHandler)
     {
         this.messageView = messageView;
         this.bucket = bucket;
+        this.eventRepo = eventRepo;
         this.mainHandler = mainHandler;
     }
 
@@ -42,13 +46,9 @@ public class MyListsHandlerTelegram
         var text = message.Text;
         var fromChatId = message.Chat.Id;
         var userId = message.From!.Id;
-        if (text == "Отмена")
-        {
-            await CancelAction(new Message());
-            return;
-        }
         await bucket.WriteUserState(userId, State.EditingList);
-        await messageView.SayWithKeyboard("Участники изменены!", fromChatId, mainHandler.GetMainKeyboard());
+        await messageView.SayWithKeyboard(text == "Отмена"? "Ввод отменен" : "Участники изменены!",
+            fromChatId, mainHandler.GetMainKeyboard());
     }
 
     public async Task EditListName(Message message)
@@ -56,29 +56,17 @@ public class MyListsHandlerTelegram
         var text = message.Text;
         var fromChatId = message.Chat.Id;
         var userId = message.From!.Id;
-        if (text == "Отмена")
-        {
-            await CancelAction(new Message());
-            return;
-        }
         await bucket.WriteUserState(userId, State.EditingList);
-        await messageView.SayWithKeyboard("Название изменено!", fromChatId, mainHandler.GetMainKeyboard());
+        await messageView.SayWithKeyboard(text == "Отмена"? "Ввод отменен" : "Название изменено!", 
+            fromChatId, mainHandler.GetMainKeyboard());
     }
-
+    
     public async Task ActionInterrupted(Message message)
     {
         var fromChatId = message.Chat.Id;
         await messageView.Say("Сначала закончите редактирование списка", fromChatId);
     }
-
-    private async Task CancelAction(Message message)
-    {
-        var userId = message.From!.Id;
-        var fromChatId = message.Chat.Id;
-        await bucket.WriteUserState(userId, State.EditingList);
-        await messageView.SayWithKeyboard("Ввод отменен", fromChatId, mainHandler.GetMainKeyboard());
-    }
-
+    
     public async Task HandleMyPeopleCommand(Message message)
     {
         var fromChatId = message.Chat.Id;
@@ -268,7 +256,7 @@ public class MyListsHandlerTelegram
         var chatId = callbackQuery.Message!.Chat.Id;
         var messageId = callbackQuery.Message.MessageId;
         // TODO: add db
-        await messageView.EditInlineMessage("Лучше пива выпей", chatId, messageId, null);
+        await messageView.EditInlineMessage("Находится в разработке", chatId, messageId, null);
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
 

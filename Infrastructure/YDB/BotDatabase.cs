@@ -4,14 +4,13 @@ using Ydb.Sdk.Services.Table;
 using Ydb.Sdk.Value;
 using Ydb.Sdk.Yc;
 
-
 namespace Infrastructure.YDB;
 
 public class BotDatabase : IBotDatabase
 {
-    private readonly Configuration configuration;
+    private readonly IYdbConfiguration configuration;
 
-    public BotDatabase(Configuration configuration)
+    public BotDatabase(IYdbConfiguration configuration)
     {
         this.configuration = configuration;
     }

@@ -2,21 +2,26 @@ using Newtonsoft.Json;
 
 namespace Domain
 {
-    public class Participant : Entity<string>
+    public class EventParticipant : Entity<long>
 
     {
     public UserStatus ParticipantUserStatus { get; set; }
+    public string? ParticipantUsername { get; set; } = "";
+    public string? ParticipantFirstName { get; set; } = "Участник";
 
-    public Participant(string userId) : base(userId)
+    public EventParticipant(long userId) : base(userId)
     {
         ParticipantUserStatus = UserStatus.Maybe;
     }
 
     [JsonConstructor]
-    public Participant(string userId, UserStatus participantUserStatus) : base(userId)
+    public EventParticipant(long userId, UserStatus participantUserStatus, string participantUsername,
+        string participantFirstName) : base(userId)
     {
         ParticipantUserStatus = participantUserStatus;
+        ParticipantUsername = participantUsername;
     }
+
 
     public string GetEmojiForStatus()
     {

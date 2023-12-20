@@ -2,6 +2,6 @@ namespace Domain;
 
 public class Date
 {
-    public readonly string? Dat;
-    public Date(string? dat) => Dat = dat;
+    public readonly DateTime? Dat;
+    public Date(DateTime? dat) => Dat = dat;
 }

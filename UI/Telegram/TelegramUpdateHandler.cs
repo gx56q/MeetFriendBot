@@ -1,7 +1,4 @@
-﻿using Application.Commands;
-using Domain;
-using Grpc.Core.Logging;
-using Infrastructure;
+﻿using Grpc.Core.Logging;
 using Infrastructure.S3Storage;
 using Infrastructure.YDB;
 using Newtonsoft.Json;
@@ -9,13 +6,13 @@ using Newtonsoft.Json.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using UI.Telegram.Commands;
 using Yandex.Cloud.Functions;
 
-// using TestMultiple;
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
 
-namespace Application;
+namespace UI.Telegram;
 
 public class Response
 {
@@ -30,13 +27,12 @@ public class Response
 }
 
 // ReSharper disable once UnusedType.Global
-public class TelegramHandler : YcFunction<string, Response>
+public class TelegramUpdateHandler : YcFunction<string, Response>
 {
     private const string CodePath = "/function/code/";
     
     public Response FunctionHandler(string request, Context context)
     {
-        // Test.Main();
         var logger = new ConsoleLogger();
         var configuration = Configuration.FromJson(CodePath + "settings.json");
         var tgClient = new TelegramBotClient(configuration.TelegramToken);

@@ -10,12 +10,12 @@ namespace Domain
             string id,
             string? name,
             string? description,
-            Location? location,
-            Date? date,
-            Picture? picture,
-            List<Participant>? participants,
+            string? location,
+            DateTime? date,
+            string? picture,
+            List<EventParticipant>? participants,
             int? inlinedMessageId,
-            string creator,
+            long creator,
             EventStatus status = EventStatus.Draft) : base(id)
         {
             Name = name;
@@ -30,12 +30,12 @@ namespace Domain
         }
         public string? Name { get; set; }
         public string? Description { get; set; }
-        public Location? Location { get; set; }
-        public Date? Date { get; set; }
-        public Picture? Picture { get; set; }
-        public List<Participant>? Participants { get; set; }
+        public string? Location { get; set; }
+        public DateTime? Date { get; set; }
+        public string? Picture { get; set; }
+        public List<EventParticipant>? Participants { get; set; }
         public int? InlinedMessageId { get; set; }
-        public string CreatorId { get; set; }
+        public long CreatorId { get; set; }
         public EventStatus Status { get; set; }
 
         public Event(long creatorId) : this(
@@ -47,12 +47,12 @@ namespace Domain
             picture: null,
             participants: null,
             inlinedMessageId: null,
-            creator: creatorId.ToString())
+            creator: creatorId)
         {
         }
 
-        public Event(string id, string name, string? description, Location location,
-            Date? date, Picture? picture, List<Participant>? participants, EventStatus status, string creator) : base(id)
+        public Event(string id, string name, string? description, string location,
+            DateTime? date, string? picture, List<EventParticipant>? participants, EventStatus status, long creator) : base(id)
         {
             Name = name;
             Description = description;
@@ -70,12 +70,12 @@ namespace Domain
             var id = jObject["id"].ToString();
             var name = jObject["name"]?.ToString();
             var description = jObject["description"]?.ToString();
-            var location = jObject["location"]?.ToObject<Location?>();
-            var date = jObject["date"]?.ToObject<Date?>();
-            var picture = jObject["picture"]?.ToObject<Picture?>();
-            var participants = jObject["participants"]?.ToObject<List<Participant>>() ?? new List<Participant>();
+            var location = jObject["location"]?.ToObject<string>();
+            var date = jObject["date"]?.ToObject<DateTime>();
+            var picture = jObject["picture"]?.ToObject<string>();
+            var participants = jObject["participants"]?.ToObject<List<EventParticipant>>() ?? new List<EventParticipant>();
             var status = jObject["status"].ToObject<EventStatus>();
-            var creator = jObject["creator"]?.ToString();
+            var creator = jObject["creator"].ToObject<long>();
             return new Event(id!, name!, description!, location!, date!, picture, participants, status, creator!);
         }
 
@@ -88,9 +88,7 @@ namespace Domain
             foreach (var property in properties)
             {
                 var propertyName = property.Name;
-
-                var propertyValue = property.GetValue(this);
-
+                
                 var translatedName = TranslateToRussian(propertyName);
 
                 if (translatedName != null)
@@ -108,9 +106,8 @@ namespace Domain
                 "Description" => "Описание",
                 "Location" => "Место проведения",
                 "Date" => "Время проведения",
-                "Picture" => "Фото",
                 "Participants" => "Участники",
-                "Creator" => "Организатор",
+                "CreatorId" => "Организатор",
                 _ => null
             };
         }

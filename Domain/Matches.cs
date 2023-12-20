@@ -2,7 +2,7 @@ namespace Domain;
 
 public class Matches
 {
-    private readonly HashSet<string> myEventsMatches = new()
+    public static readonly HashSet<string> myEventsMatches = new()
     {
         "\ud83d\udcc5 мои встречи",
         "мои встречи",
@@ -13,8 +13,8 @@ public class Matches
         "события",
         "мои"
     };
-    
-    private readonly HashSet<string> newEventMatches = new()
+
+    public static readonly HashSet<string> newEventMatches = new()
     {
         "\ud83c\udfd7 создать встречу",
         "создать встречу",

@@ -4,7 +4,7 @@ using Infrastructure.YDB;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace Application;
+namespace UI.Telegram.AppLogic;
 
 public interface IMainHandler
 {
@@ -17,16 +17,16 @@ public class MainHandler : IMainHandler
 {
     private readonly IMessageView messageView;
     private readonly IBucket bucket;
-    private readonly IBotDatabase botDatabase;
+    private readonly EventRepo eventRepo;
     
     public MainHandler(
         IMessageView messageView,
         IBucket bucket,
-        IBotDatabase botDatabase)
+        EventRepo eventRepo)
     {
         this.messageView = messageView;
         this.bucket = bucket;
-        this.botDatabase = botDatabase;
+        this.eventRepo = eventRepo;
     }
     
     public ReplyKeyboardMarkup GetMainKeyboard()
@@ -74,7 +74,8 @@ public class MainHandler : IMainHandler
                     chatId, key);
                    break;
             case "listparticipants":
-                await messageView.SayWithKeyboard("Отправьте участников или нажмите кнопку назад для отмены", 
+                await messageView.SayWithKeyboard("Отправьте username участников через запятую, пробел или новую строку," +
+                                                  " или нажмите кнопку назад для отмены", 
                         chatId, key);
                     break;
             case "name":

@@ -5,22 +5,25 @@ namespace Domain
     public class PersonList : Entity<string>
     {
         public string Name { get; set; }
-        public List<Participant> Participants { get; set; }
+        // TODO: store PersonListParticipants instead of long
+        public List<long> Participants { get; set; }
+        public long CreatorId { get; set; }
         public EventStatus Status { get; set; }
 
         public PersonList(string name) : base(Guid.NewGuid().ToString())
         {
             Name = name;
-            Participants = new List<Participant>();
+            Participants = new List<long>();
             Status = EventStatus.Draft;
         }
 
-        private PersonList(string id, string name, List<Participant> participants) : base(id)
+        public PersonList(string id, string name, List<long> participants, long creatorId, 
+            EventStatus status) : base(id)
         {
-            Id = id;
             Name = name;
             Participants = participants;
-            Status = EventStatus.Draft;
+            CreatorId = creatorId;
+            Status = status;
         }
 
         public static PersonList FromJson(string json)
@@ -28,13 +31,10 @@ namespace Domain
             var jObject = JObject.Parse(json);
             var id = jObject["id"]?.ToString();
             var name = jObject["name"]?.ToString();
-            var participantsIdString = jObject["participants"]?.ToObject<List<string>>() ?? new List<string>();
-            var participants = new List<Participant>();
-            if (participantsIdString.Count != 0)
-                participants.AddRange(participantsIdString.Select(participant => new Participant(participant)));
-            var status = jObject["status"]?.ToString() ?? "draft";
-            return status == "draft" ? new PersonList(id!, name!, participants) { Status = EventStatus.Draft }
-                : new PersonList(id!, name!, participants) { Status = EventStatus.Active };
+            var participants = jObject["participants"]?.ToObject<List<long>>() ?? new List<long>();
+            var status = Enum.Parse<EventStatus>(jObject["status"]?.ToString() ?? "Draft");
+            var creator = jObject["creator"]?.ToObject<long>() ?? 0;
+            return new PersonList(id!, name!, participants, creator, status);
         }
     }
 }

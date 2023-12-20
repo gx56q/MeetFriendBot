@@ -9,35 +9,11 @@ using Infrastructure.YDB;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using EventStatus = Domain.EventStatus;
-using Location = Domain.Location;
 
-namespace Application;
+namespace UI.Telegram.AppLogic;
 
 public class MyEventsHandler
 {
-    private static List<Event> RetrieveEvents(long userId)
-    {
-        return new List<Event>
-        {
-            Event.FromJson(
-                @"{""id"":""1"",""name"":""Встреча с друзьями"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""349173467"", ""status"":""active"", ""Picture"":""true""}"),
-            Event.FromJson(
-                @"{""id"":""2"",""name"":""Созвон"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""349173467"", ""status"":""active"", ""Picture"":""false""}"),
-            Event.FromJson(
-                @"{""id"":""3"",""name"":""Экзамен тервер"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""X_V_I_M"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""1059949647"", ""status"":""active"", ""Picture"":""false""}"),
-            Event.FromJson(
-                @"{""id"":""4"",""name"":""Яндекс митап"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""1059949647"", ""status"":""active"", ""Picture"":""false""}"),
-            Event.FromJson(
-                @"{""id"":""5"",""name"":""Шашлычок"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""1059949647"", ""status"":""active"", ""Picture"":""false""}"),
-            Event.FromJson(
-                @"{""id"":""6"",""name"":""Футбольчик"",""date"":""2024-10-10T12:00:00"",""description"":""Мальчики походят на качков"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""1059949647"", ""status"":""active"", ""Picture"":""false""}"),
-            Event.FromJson(
-                @"{""id"":""7"",""name"":""Перекур"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""1059949647"", ""status"":""active"", ""Picture"":""false""}"),
-            Event.FromJson(
-                @"{""id"":""8"",""name"":""Коньячок"",""date"":""2024-10-10T12:00:00"",""description"":""Встреча с друзьями в кафе"", ""location"":""Кафе"", ""participants"":[{""userId"":""gx56q"",""participantStatus"":""WillGo""},{""userId"":""dudefromtheInternet"",""participantStatus"":""WillGo""},{""userId"":""yellooot"",""participantStatus"":""WillGo""}, {""userId"":""xoposhiy"",""participantStatus"":""WillGo""}], ""creator"":""1059949647"", ""status"":""active"", ""Picture"":""false""}")
-        };
-    }
-    
     private static string GetTaxiLink(string location)
     {
         return
@@ -54,11 +30,11 @@ public class MyEventsHandler
     {
         var calendar = new Calendar();
 
-        var calendarEvent = new CalendarEvent()
+        var calendarEvent = new CalendarEvent
         {
             Summary = data.Name,
             Description = data.Description,
-            Location = data.Location?.ToString() ?? "",
+            Location = data.Location ?? "",
             DtStart = new CalDateTime(Convert.ToDateTime(data.Date), "UTC")
         };
         
@@ -68,59 +44,36 @@ public class MyEventsHandler
         return Encoding.UTF8.GetBytes(calendarString);
     }
 
-
     private readonly IMessageView messageView;
     private readonly IBucket bucket;
-    private readonly IBotDatabase botDatabase;
+    private readonly EventRepo eventRepo;
     private readonly IMainHandler mainHandler;
 
     public MyEventsHandler(
         IMessageView messageView,
         IBucket bucket,
-        IBotDatabase botDatabase,
+        EventRepo eventRepo,
         IMainHandler mainHandler)
     {
         this.messageView = messageView;
         this.bucket = bucket;
-        this.botDatabase = botDatabase;
+        this.eventRepo = eventRepo;
         this.mainHandler = mainHandler;
     }
-
-    private readonly HashSet<string> myEventsMatches = new()
-    {
-        "\ud83d\udcc5 мои встречи",
-        "мои встречи",
-        "встречи",
-        "мои события",
-        "список встреч",
-        "список событий",
-        "события",
-        "мои"
-    };
-
-    private readonly HashSet<string> newEventMatches = new()
-    {
-        "\ud83c\udfd7 создать встречу",
-        "создать встречу",
-        "новая встреча",
-        "новое событие",
-        "встреча",
-        "новая",
-        "создать"
-    };
-
+    
     public async Task EditPicture(Message message)
     {
-        if (message.Text == "Отмена")
+        switch (message.Text)
         {
-            await CancelAction(message);
-            return;
-        }
-
-        if (message.Text == "Удалить фото")
-        {
-            await DeletePhoto(message);
-            return;
+            case "Отмена":
+                await CancelAction(message);
+                return;
+            case "Назад":
+                await CancelAction(message);
+                return;
+            case "Удалить фото":
+                await DeletePhoto(message);
+                return;
         }
 
         if (message.Photo == null)
@@ -132,7 +85,7 @@ public class MyEventsHandler
         var draft = await bucket.GetEventDraft(message.From!.Id);
         var fileId = message.Photo!.Last().FileId;
         await bucket.WriteEventPicture(draft.Id, fileId);
-        draft.Picture = new Picture("0"); // TO-DO: 0 index?? 
+        draft.Picture = fileId;
         await bucket.WriteEventDraft(message.From.Id, draft);
         await bucket.WriteUserState(message.From.Id,
             draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
@@ -183,14 +136,14 @@ public class MyEventsHandler
         var messageText = new StringBuilder();
         foreach (var field in fields)
         {
-            if (field.Key == "Creator") continue;
+            if (field.Key == "CreatorId") continue;
             var propertyValue = GetPropertyValue(newEvent, field.Key);
             switch (propertyValue)
             {
                 case DateTime dateTime:
                     propertyValue = dateTime.ToString("yyyy-MM-dd HH:mm:ss");
                     break;
-                case List<Participant> participants:
+                case List<EventParticipant> participants:
                     propertyValue = participants.Count.ToString();
                     break;
                 case null:
@@ -207,26 +160,30 @@ public class MyEventsHandler
             messageText.AppendLine($"<b>{field.Value}:</b> {propertyValue}");
         }
 
-        var organizerField = fields.FirstOrDefault(f => f.Key == "Creator");
+        var organizerField = fields.FirstOrDefault(f => f.Key == "CreatorId");
         if (organizerField.Key != null)
         {
-            if (GetPropertyValue(newEvent, organizerField.Key) is string organizerValue)
+            if (GetPropertyValue(newEvent, organizerField.Key) is long organizerValue)
             {
                 messageText.AppendLine(
-                    $"<b>{organizerField.Value}:</b> <a href=\"tg://user?id={organizerValue}\">Имя организатора</a>");
+                    $"<a href=\"tg://user?id={organizerValue}\">Организатор встречи</a>");
             }
         }
 
         var participantsField = fields.FirstOrDefault(f => f.Key == "Participants");
         if (participantsField.Key == null) return messageText.ToString();
-        var participantsValue = GetPropertyValue(newEvent, participantsField.Key) as List<Participant>;
+        var participantsValue = GetPropertyValue(newEvent, participantsField.Key) as List<EventParticipant>;
         if (participantsValue == null || !participantsValue.Any()) return messageText.ToString();
         messageText.AppendLine();
         messageText.AppendLine($"{participantsField.Value}:");
         foreach (var participant in participantsValue)
         {
-            messageText.AppendLine($"- <a href=\"@{participant.Id}\"> @{participant.Id}</a>" +
-                                   $" ({participant.GetEmojiForStatus()})");
+            if (participant.ParticipantUsername is not "")
+                messageText.AppendLine($"- <a href=\"@{participant.ParticipantUsername}\"> @{participant.ParticipantUsername}</a>" +
+                                       $" ({participant.GetEmojiForStatus()})");
+            else
+                messageText.AppendLine($"- <a href=\"tg://user?id={participant.Id}\">{participant.ParticipantFirstName}</a>" +
+                                       $" ({participant.GetEmojiForStatus()})");
         }
 
         return messageText.ToString();
@@ -259,11 +216,11 @@ public class MyEventsHandler
         var inlineKeyboard = GetBaseInlineKeyboard(fields);
         var cancelButton = new InlineKeyboardButton("Отмена")
         {
-            CallbackData = $"cancelEvent"
+            CallbackData = "cancelEvent"
         };
         var createButton = new InlineKeyboardButton("Создать")
         {
-            CallbackData = $"createEvent"
+            CallbackData = "createEvent"
         };
         inlineKeyboard.Add(new List<InlineKeyboardButton> { cancelButton, createButton });
         return new InlineKeyboardMarkup(inlineKeyboard);
@@ -281,7 +238,7 @@ public class MyEventsHandler
         var i = 0;
         foreach (var pair in fields)
         {
-            if (pair.Key == "Creator") continue;
+            if (pair.Key == "CreatorId") continue;
 
             var fieldButton = new InlineKeyboardButton(pair.Value)
             {
@@ -302,20 +259,20 @@ public class MyEventsHandler
         return inlineKeyboard;
     }
 
-    public async Task ActionInterrupted(Message message)
+    public async Task ActionInterrupted(Message message, State userState)
     {
         var fromChatId = message.Chat.Id;
         var text = message.Text!.ToLower();
-        if (newEventMatches.Contains(text.ToLower()))
+        if (Matches.newEventMatches.Contains(text.ToLower()) && userState == State.CreatingEvent)
         {
             await HandleNewEvent(message);
             return;
         }
-        if (myEventsMatches.Contains(text.ToLower()))
-        {
-            await HandleMyEvents(message);
-            return;
-        }
+        // if (Matches.myEventsMatches.Contains(text.ToLower()) && userState == State.EditingEvent)
+        // {
+        //     await HandleMyEvents(message);
+        //     return;
+        // }
 
         await messageView.Say("Сначала закончите текущее действие", fromChatId);
     }
@@ -347,10 +304,30 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
+        
+        if (text == "Назад")
+        {
+            await CancelAction(message);
+            return;
+        }
 
         var draft = await bucket.GetEventDraft(userId);
-        var participants = text!.Split(' ');
-        draft.Participants = participants.Select(p => new Participant(p.Trim(), UserStatus.Maybe)).ToList();
+        var participantsRaw = text.Split(new[] { ',', ' ', '\n' },
+            StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Trim().Replace("@", "")).ToList();
+        var participants = await eventRepo.FilterValidUsersByUsernames(participantsRaw);
+        var inactiveUsers = participantsRaw.Except(participants.Select(p => p.Username)).ToList();
+        if (inactiveUsers.Any())
+        {
+            await messageView.Say($"Пользователи: {string.Join("\n", inactiveUsers)}\n не найдены\n" +
+                                  $"Отправьте им этого бота, чтобы добавить их в список участников", fromChatId);
+        }
+        if (!participants.Any())
+        {
+            return;
+        }
+        draft.Participants = participants.Select(p => new EventParticipant(p.Id, UserStatus.Maybe, p.Username ?? "", 
+            p.FirstName?? "")).ToList();
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Участники изменены!", fromChatId, mainHandler.GetMainKeyboard());
@@ -362,9 +339,15 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
+        if (text == "Назад")
+        {
+            await CancelAction(message);
+            return;
+        }
 
         var draft = await bucket.GetEventDraft(userId);
-        draft.Date = new Date(text);
+        // TODO: date verification
+        draft.Date = DateTime.Parse(text);
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Дата изменена!", fromChatId, mainHandler.GetMainKeyboard());
@@ -376,10 +359,15 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
+        if (text == "Назад")
+        {
+            await CancelAction(message);
+            return;
+        }
 
         var draft = await bucket.GetEventDraft(userId);
         // TODO logic
-        draft.Location = new Location(text);
+        draft.Location = text;
         await bucket.WriteEventDraft(userId, draft);
         await bucket.WriteUserState(userId, draft.Status == EventStatus.Active ? State.EditingEvent : State.CreatingEvent);
         await messageView.SayWithKeyboard("Место изменено!", fromChatId, mainHandler.GetMainKeyboard());
@@ -391,6 +379,11 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
+        if (text == "Назад")
+        {
+            await CancelAction(message);
+            return;
+        }
 
         var draft = await bucket.GetEventDraft(userId);
         draft.Description = text;
@@ -405,6 +398,11 @@ public class MyEventsHandler
         var userId = message.From!.Id;
         var fromChatId = message.Chat.Id;
         var text = message.Text;
+        if (text == "Назад")
+        {
+            await CancelAction(message);
+            return;
+        }
 
         var draft = await bucket.GetEventDraft(userId);
         draft.Name = text;
@@ -418,7 +416,7 @@ public class MyEventsHandler
     {
         var fromChatId = message.Chat.Id;
         var userId = message.From!.Id;
-        var myEvents = RetrieveEvents(userId);
+        var myEvents = await eventRepo.GetEventsByUserId(userId);
         if (myEvents.Any())
         {
             var inlineKeyboard = GetEventsInlineKeyboard(myEvents);
@@ -467,20 +465,21 @@ public class MyEventsHandler
         await bucket.WriteEventDraft(userId, draft);
     }
 
-    private static InlineKeyboardMarkup GetEventsInlineKeyboard(IReadOnlyList<Event> myEvents,
+    private static InlineKeyboardMarkup GetEventsInlineKeyboard(IEnumerable<ISimple> myEvents,
         int currentPage = 1, int eventsPerPage = 6)
     {
         const int columnCount = 2;
         var inlineKeyboard = new List<List<InlineKeyboardButton>>();
 
         var startIndex = (currentPage - 1) * eventsPerPage;
-        var endIndex = Math.Min(startIndex + eventsPerPage, myEvents.Count);
+        var enumerable = myEvents as ISimple[] ?? myEvents.ToArray();
+        var endIndex = Math.Min(startIndex + eventsPerPage, enumerable.Length);
 
         for (var i = startIndex; i < endIndex; i++)
         {
-            var eventButton = new InlineKeyboardButton(myEvents[i].Name!)
+            var eventButton = new InlineKeyboardButton(enumerable[i].Name)
             {
-                CallbackData = $"showEvent_{myEvents[i].Id}"
+                CallbackData = $"showEvent_{enumerable[i].Id}"
             };
 
             var columnIndex = (i - startIndex) % columnCount;
@@ -493,7 +492,7 @@ public class MyEventsHandler
             inlineKeyboard.Last().Add(eventButton);
         }
 
-        if (myEvents.Count > endIndex)
+        if (enumerable.Length > endIndex)
         {
             var nextButton = new InlineKeyboardButton("Вперед ➡️")
                 { CallbackData = $"changePageEvents_{currentPage + 1}" };
@@ -517,26 +516,27 @@ public class MyEventsHandler
         var userId = callbackQuery.From.Id;
         var eventId = callbackQuery.Data!.Split('_')[1];
         var callbackQueryId = callbackQuery.Id;
-        var events = RetrieveEvents(userId);
-        var myEvent = events.FirstOrDefault(e => e.Id == eventId);
+        var myEvent = await eventRepo.GetEventById(eventId);
         if (myEvent != null)
         {
-            var currentStatus = myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")?.ParticipantUserStatus;
-            if (currentStatus == UserStatus.Maybe)
+            var participant = myEvent.Participants!.FirstOrDefault(p => p.Id == userId);
+            var currentStatus = participant!.ParticipantUserStatus;
+            switch (currentStatus)
             {
-                myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
-                await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
+                case UserStatus.Maybe:
+                    participant.ParticipantUserStatus = UserStatus.WillGo;
+                    await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
+                    break;
+                case UserStatus.WillGo:
+                    participant.ParticipantUserStatus = UserStatus.WontGo;
+                    await messageView.AnswerCallbackQuery(callbackQueryId, "Вы не идете");
+                    break;
+                case UserStatus.WontGo:
+                    participant.ParticipantUserStatus = UserStatus.WillGo;
+                    await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
+                    break;
             }
-            else if (currentStatus == UserStatus.WillGo)
-            {
-                myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus = UserStatus.WontGo;
-                await messageView.AnswerCallbackQuery(callbackQueryId, "Вы не идете");
-            }
-            else if (currentStatus == UserStatus.WontGo)
-            {
-                myEvent.Participants!.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus = UserStatus.WillGo;
-                await messageView.AnswerCallbackQuery(callbackQueryId, "Вы идете");
-            }
+            await eventRepo.PushEvent(myEvent);
             await HandleViewEventAction(callbackQuery, true);
         }
     }
@@ -549,7 +549,7 @@ public class MyEventsHandler
         var data = callbackQuery.Data!.Split('_');
         var currentPage = int.Parse(data[1]);
 
-        var myEvents = RetrieveEvents(userId);
+        var myEvents = await eventRepo.GetEventsByUserId(userId);
         var eventsKeyboard = GetEventsInlineKeyboard(myEvents, currentPage);
         await messageView.EditInlineKeyboard("\ud83e\udd1d Ваши встречи:", chatId, messageId, eventsKeyboard);
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
@@ -565,13 +565,12 @@ public class MyEventsHandler
 
 
         await bucket.WriteUserState(userId, State.Start);
-        var events = RetrieveEvents(userId);
-        var myEvent = events.FirstOrDefault(e => e.Id == eventId);
+        var myEvent = await eventRepo.GetEventById(eventId);
 
         if (myEvent != null)
         {
             var messageText = GetEventMessageText(myEvent, myEvent.GetFields());
-            var inlineKeyboard = GetEventInlineKeyboard(myEvent);
+            var inlineKeyboard = GetEventInlineKeyboard(myEvent, userId);
             if (toEdit)
             {
                 await messageView.EditInlineMessageWithPhoto(messageText, chatId, messageId, inlineKeyboard,
@@ -592,7 +591,7 @@ public class MyEventsHandler
         await messageView.AnswerCallbackQuery(callbackQuery.Id, null);
     }
     
-    private InlineKeyboardMarkup GetEventInlineKeyboard(Event myEvent)
+    private InlineKeyboardMarkup GetEventInlineKeyboard(Event myEvent, long userId)
     { 
         var inlineKeyboard = new List<List<InlineKeyboardButton>>();
         List<InlineKeyboardButton> firstRow = new();
@@ -601,9 +600,9 @@ public class MyEventsHandler
                 CallbackData = $"addToCalendar_{myEvent.Id}"
             };
         firstRow.Add(addToCalendarButton);
-        if (myEvent.Participants != null && myEvent.Participants.Any(p => p.Id == "xoposhiy"))
+        if (myEvent.Participants != null && myEvent.Participants.Any(p => p.Id == userId))
         {
-            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.Id == "xoposhiy")!.ParticipantUserStatus;
+            var currentStatus = myEvent.Participants.FirstOrDefault(p => p.Id == userId)!.ParticipantUserStatus;
             switch (currentStatus)
             {
                 case UserStatus.Maybe or UserStatus.WontGo:
@@ -630,16 +629,15 @@ public class MyEventsHandler
         // TODO: show only if in coordinates
         var showOnMapButton = new InlineKeyboardButton("\ud83d\uddfa Карта")
         {
-            Url = GetMapLink(myEvent.Location.Loc!)
+            Url = GetMapLink(myEvent.Location!)
         };
         var orderTaxiButton = new InlineKeyboardButton("\ud83d\ude95 Такси")
         {
-            Url = GetTaxiLink(myEvent.Location.Loc!)
+            Url = GetTaxiLink(myEvent.Location!)
         };
         inlineKeyboard.Add(new List<InlineKeyboardButton> { showOnMapButton, orderTaxiButton });
             
-        // if (myEvent.Creator == userId.ToString())
-        if (myEvent.CreatorId == "349173467")
+        if (myEvent.CreatorId == userId)
         {
             var editButton = new InlineKeyboardButton("Редактировать встречу")
             {
@@ -661,11 +659,11 @@ public class MyEventsHandler
         var userId = callbackQuery.From.Id;
         var chatId = callbackQuery.Message!.Chat.Id;
         var eventId = callbackQuery.Data!.Split('_')[1];
-        var events = RetrieveEvents(userId);
-        var myEvent = events.FirstOrDefault(e => e.Id == eventId);
+        var myEvent = await eventRepo.GetEventById(eventId);
         if (myEvent != null)
         {
             var calendar = GetEventCalendar(myEvent);
+            // TODO: add note how to add to calendar
             await messageView.SendFile(chatId, calendar, "your_event.ics", 
                 "TODO: тут может будет справочка как добавить из файла к себе в календарь");
         }
@@ -677,7 +675,8 @@ public class MyEventsHandler
         var userId = callbackQuery.From.Id;
         var eventId = callbackQuery.Data!.Split('_')[1];
         var callbackQueryId = callbackQuery.Id;
-        // TODO: save draft to database
+        var draft = await bucket.GetEventDraft(userId);
+        await eventRepo.PushEvent(draft);
         await bucket.ClearEventDraft(userId);
         await bucket.WriteUserState(userId, State.Start);
         callbackQuery.Data = $"showEvent_{eventId}";
@@ -726,7 +725,7 @@ public class MyEventsHandler
             await messageView.Say("Нужно заполнить место", chatId);
             return;
         }
-        // TODO: push to database
+        await eventRepo.PushEvent(draft);
         await bucket.ClearEventDraft(userId);
         await bucket.WriteUserState(userId, State.Start);
         await messageView.DeleteMessage(chatId, messageId);
@@ -741,7 +740,7 @@ public class MyEventsHandler
         var messageId = callbackQuery.Message.MessageId;
         var callbackQueryId = callbackQuery.Id;
         
-        var myEvents = RetrieveEvents(userId);
+        var myEvents = await eventRepo.GetEventsByUserId(userId);
         var eventsKeyboard = GetEventsInlineKeyboard(myEvents);
         await messageView.EditInlineMessage("\ud83e\udd1d Ваши встречи:", chatId, messageId, 
             eventsKeyboard);
@@ -756,11 +755,13 @@ public class MyEventsHandler
         var callbackQueryId = callbackQuery.Id;
         var eventId = callbackQuery.Data!.Split('_')[1];
         
-        
-        var events = RetrieveEvents(userId);
-        var existingEvent = events.FirstOrDefault(e => e.Id == eventId);
-        // if (existingEvent != null && existingEvent.Creator == userId.ToString())
-        if (existingEvent is { CreatorId: "349173467" })
+        var existingEvent = await eventRepo.GetEventById(eventId);
+        if (existingEvent is null)
+        {
+            await messageView.AnswerCallbackQuery(callbackQueryId, "Событие не найдено");
+            return;
+        }
+        if (existingEvent.CreatorId == userId)
         {
             await bucket.WriteUserState(userId, State.EditingEvent);
             existingEvent.InlinedMessageId = messageId;

@@ -1,9 +1,11 @@
 using AspNetCore.Yandex.ObjectStorage.Configuration;
+using Infrastructure.S3Storage;
+using Infrastructure.YDB;
 using Microsoft.Extensions.Configuration;
 
-namespace Infrastructure;
+namespace UI.Telegram;
 
-public class Configuration
+public class Configuration : IBucketConfiguration, IYdbConfiguration
 {
     public YandexStorageOptions YandexStorageOptions { get; }
     public string TelegramToken => appSettings[nameof(TelegramToken)]!;
